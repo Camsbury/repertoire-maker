@@ -101,7 +101,7 @@
    (fn [acc {:keys [moves pct] :as moveset}]
      (if-let [new-moves (strategy/select-option
                          {:moves   moves
-                          :master  (moves->options :masters moves)
+                          :masters  (moves->options :masters moves)
                           :lichess (moves->options :lichess moves)
                           :engine  [] ;; TODO: pull in engine analyzed moves
                           :color   color})]
@@ -137,7 +137,7 @@
 (comment
 
   (let [color :white
-        moves ["e2e4" "c7c5"]
+        moves ["e2e4" "c7c5" "g1f3"]
         filter-pct 0.01]
     (-> {:color color
          :moves moves
