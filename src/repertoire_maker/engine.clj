@@ -43,7 +43,7 @@
          (mapv :uci))))
 
 (defn moves->engine-options
-  [{:keys [moves depth m-count allowable-loss]}]
+  [{:keys [moves m-count allowable-loss]}]
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
         _      (py. engine "configure" (py/->py-dict {"Hash"    2048
                                                       "Threads" 7}))
@@ -55,7 +55,7 @@
         info   (py. engine
                     "analyse"
                     board
-                    (ngn/Limit :time 1 #_#_ :depth depth)
+                    (ngn/Limit :time 1)
                     :multipv m-count)
         moves  (->> info
                    (map #(uci-and-score :white %))

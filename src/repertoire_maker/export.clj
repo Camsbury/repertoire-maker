@@ -1,6 +1,7 @@
 (ns repertoire-maker.export
   (:require
    [python-base]
+   [flatland.ordered.map  :as ordered]
    [libpython-clj2.python :refer [py.]]
    [libpython-clj2.require :refer [require-python]]))
 
@@ -10,7 +11,7 @@
 
 (defn export-repertoire
   [movesets]
-  (let [move-tree (reduce #(assoc-in %1 %2 nil) {} movesets)
+  (let [move-tree (reduce #(assoc-in %1 %2 nil) (ordered/ordered-map) movesets)
         game      (pgn/Game)]
     ;;  traversal writing the game tree
     (loop [stack (mapv (fn [move] [[move] [game]]) (keys move-tree))]

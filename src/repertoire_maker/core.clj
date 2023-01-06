@@ -97,28 +97,28 @@
    movesets))
 
 (defn- select-options
-  [movesets color move-choice-pct]
+  [{:keys [movesets color move-choice-pct overrides]}]
   (reduce
    (fn [acc {:keys [moves pct] :as moveset}]
      (if-let [new-moves (strategy/select-option
-                         {:moves   moves
+                         {:moves           moves
                           :move-choice-pct move-choice-pct
                           ;; :masters  (moves->options :masters moves)
-                          :lichess (moves->options :lichess moves)
-                          :engine  (ngn/moves->engine-options
-                                    {:moves moves
-                                     :depth 20
-                                     :m-count 10
-                                     :allowable-loss 100})
-                          :color   color})]
+                          :lichess         (moves->options :lichess moves)
+                          :engine          (ngn/moves->engine-options
+                                            {:moves          moves
+                                             :m-count        10
+                                             :allowable-loss 100})
+                          :overrides       overrides
+                          :color           color})]
        (update acc 1 conj (assoc moveset :moves new-moves))
        (update acc 0 conj moves)))
    [[] []]
    movesets))
 
 (defn build-repertoire
-  [{:keys [color moves filter-pct move-choice-pct]
-    :or   {filter-pct 0.01
+  [{:keys [color moves filter-pct move-choice-pct overrides]
+    :or   {filter-pct      0.01
            move-choice-pct 0.01}}]
   (loop [exhausted []
          movesets  [{:moves moves
@@ -133,7 +133,11 @@
                util/whose-turn?
                (= color))
         (let [[new-exhausted movesets]
-              (select-options movesets color move-choice-pct)]
+              (select-options
+               {:movesets        movesets
+                :color           color
+                :overrides       overrides
+                :move-choice-pct move-choice-pct})]
           (recur
            (into exhausted new-exhausted)
            movesets))
@@ -143,16 +147,24 @@
            (into exhausted new-exhausted)
            movesets))))))
 
+(def overrides
+  {["e2e4" "e7e5"]               "g1f3"
+   ["e2e4" "c7c5"]               "g1f3"
+   ["e2e4" "e7e6"]               "d2d4"
+   ["e2e4" "c7c5" "g1f3" "d7d6"] "d2d4"})
+
 (comment
 
-  (let [color :white
-        moves ["e2e4" "c7c5" "g1f3"]
-        filter-pct 0.01
-        move-choice-pct 0.01]
-    (-> {:color color
-         :moves moves
-         :filter-pct filter-pct
-         :move-choice-pct move-choice-pct}
+  (let [color           :white
+        moves           ["e2e4"]
+        filter-pct      0.005
+        move-choice-pct 0.01
+        overrides       overrides]
+    (-> {:color           color
+         :moves           moves
+         :filter-pct      filter-pct
+         :move-choice-pct move-choice-pct
+         :overrides       overrides}
         build-repertoire
         export/export-repertoire))
   )
