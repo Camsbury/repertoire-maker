@@ -50,87 +50,98 @@
 
 (defn moves->options
   [group moves]
-  (let [
-        speeds  ["bullet" "blitz" "rapid"]
+  (let [speeds  ["bullet" "blitz" "rapid"]
         ratings [2000 2200 2500]]
     #_
     (trigger-request-wait-period :games)
     (Thread/sleep 700)
-    (-> "https://explorer.lichess.ovh/"
-        (str (name group))
-        (http/get
-         {:query-params
-          (cond-> {:moves 30
-                   :topGames 0
-                   :play (str/join "," moves)}
-            (= group :lichess)
-            (merge
-             {:recentGames 0
-              :speeds      (str/join "," speeds)
-              :ratings     (str/join "," ratings)}))})
-        :body
-        util/from-json
-        :moves
-        process-options)))
+    (try
+      (-> "https://explorer.lichess.ovh/"
+          (str (name group))
+          (http/get
+           {:query-params
+            (cond-> {:moves 30
+                     :topGames 0
+                     :play (str/join "," moves)}
+              (= group :lichess)
+              (merge
+               {:recentGames 0
+                :speeds      (str/join "," speeds)
+                :ratings     (str/join "," ratings)}))})
+          :body
+          util/from-json
+          :moves
+          process-options)
+      (catch Exception e
+        (do
+          (println "Errored on: " moves)
+          (throw e))))))
 
 (defn- expand-moves
-  [moves]
-  (let [filter-pct   0.01
-        filter-plays 100]
-    (->> moves
-         (moves->options :lichess)
-         (filter #(< filter-pct (:play-pct %)))
-         (filter #(< filter-plays (:play-count %)))
-         (map :uci)
-         (map #(conj moves %)))))
+  [moves parent-pct filter-pct]
+  (->> moves
+       (moves->options :lichess)
+       (filter #(< filter-pct (* parent-pct (:play-pct %))))
+       (map (fn [move] {:moves (conj moves (:uci move))
+                        :pct   (* parent-pct (:play-pct move))}))))
 
 (defn- expand-movesets
-  [movesets]
+  [movesets filter-pct]
   (reduce
-   (fn [acc moves]
-     (if-let [moveset (seq (expand-moves moves))]
+   (fn [acc {:keys [moves pct]}]
+     (if-let [moveset (seq (expand-moves moves pct filter-pct))]
        (update acc 1 into moveset)
-       (update acc 0 conj moves)
-       ))
+       (update acc 0 conj moves)))
+   [[] []]
+   movesets))
+
+(defn- select-options
+  [movesets color]
+  (reduce
+   (fn [acc {:keys [moves pct] :as moveset}]
+     (if-let [new-moves (strategy/select-option
+                         {:moves   moves
+                          :master  (moves->options :masters moves)
+                          :lichess (moves->options :lichess moves)
+                          :engine  [] ;; TODO: pull in engine analyzed moves
+                          :color   color})]
+       (update acc 1 conj (assoc moveset :moves new-moves))
+       (update acc 0 conj moves)))
    [[] []]
    movesets))
 
 (defn build-repertoire
-  [{:keys [color moves depth]
-    :or   {depth 5}}]
-  (loop [exhausted [] movesets [moves]]
-    (if (->> movesets
-             first
-             count
-             (= depth))
-      (into exhausted movesets)
+  [{:keys [color moves filter-pct]
+    :or   {filter-pct 0.1}}]
+  (loop [exhausted []
+         movesets  [{:moves moves
+                     :pct   1.0}]]
+    (if (empty? movesets)
+      (->> movesets
+           (into exhausted (map :moves))
+           (sort-by count >))
       (if (->> movesets
                first
+               :moves
                util/whose-turn?
                (= color))
-        (recur
-         exhausted
-         (map
-          #(strategy/select-option
-            {:moves   %
-             :master  (moves->options :masters %)
-             :lichess (moves->options :lichess %)
-             :engine  [] ;; TODO: pull in engine analyzed moves
-             :color   color})
-          movesets))
-        (let [[exhausted movesets] (expand-movesets movesets)]
+        (let [[new-exhausted movesets] (select-options movesets color)]
           (recur
-           exhausted
+           (into exhausted new-exhausted)
+           movesets))
+        (let [[new-exhausted movesets] (expand-movesets movesets filter-pct)]
+          (recur
+           (into exhausted new-exhausted)
            movesets))))))
 
 (comment
 
   (let [color :white
         moves ["e2e4" "c7c5"]
-        depth 10]
+        filter-pct 0.01]
     (-> {:color color
          :moves moves
-         :depth depth}
+         :filter-pct filter-pct}
         build-repertoire
         export/export-repertoire))
   )
