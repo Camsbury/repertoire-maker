@@ -11,8 +11,10 @@ in
       clojure
       clj-kondo
       python-custom
+      stockfish
     ];
     shellHooks = ''
       export PYTHON_HOME=${python-custom}
+      export STOCKFISH_PATH=${stockfish}/bin/stockfish
     '';
   }
