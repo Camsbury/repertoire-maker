@@ -1,0 +1,7 @@
+{:paths ["src"]
+ :deps  {camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
+        environ/environ                      {:mvn/version "1.2.0"}
+         clj-http/clj-http                   {:mvn/version "3.12.3"}
+         com.taoensso/timbre                 {:mvn/version "4.10.0"}
+         clj-python/libpython-clj            {:mvn/version "2.020"}
+         wing/wing                           {:mvn/version "0.1.4"}}}

@@ -1,0 +1,5 @@
+*.cpcache/
+*.~undo-tree~
+*scratch.clj
+.envrc
+.nrepl-port
