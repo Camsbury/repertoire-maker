@@ -1,15 +1,20 @@
 (ns repertoire-maker.strategy
   (:require
+   [repertoire-maker.engine :as ngn]
    [repertoire-maker.util :as util]))
 
+;; NOTE - could do some kind of statistical significance thing where we are
+;; comparing distributions based on sample size to see the probability that
+;; one is better than the other.
 (defn select-option
-  [{:keys [moves masters lichess engine color]}]
-  (let [min-pct   0.01 ;; NOTE - could do some kind of statistical significance thing where we are comparing distributions based on sample size to see the probability that one is better than the other.
-        min-plays 100]
-    (some->> (->> lichess
-                  (filter #(< min-plays (:play-count %)))
-                  (filter #(< min-pct (:play-pct %)))
-                  (sort-by (get {:black :white :white :black} color))
-                  first
-                  :uci)
-             (conj moves))))
+  [{:keys [moves move-choice-pct masters lichess engine color]}]
+  (let [min-plays 100
+        next-move
+        (->> lichess
+             (filter #(< min-plays (:play-count %)))
+             (filter #(< move-choice-pct (:play-pct %)))
+             (filter #(contains? (set engine) (:uci %)))
+             (sort-by (get {:black :white :white :black} color))
+             first
+             :uci)]
+    (conj moves (or next-move (first engine)))))

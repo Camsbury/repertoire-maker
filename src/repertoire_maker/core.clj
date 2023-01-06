@@ -1,5 +1,6 @@
 (ns repertoire-maker.core
   (:require
+   [repertoire-maker.engine :as ngn]
    [repertoire-maker.export :as export]
    [repertoire-maker.strategy :as strategy]
    [repertoire-maker.util :as util]
@@ -54,7 +55,7 @@
         ratings [2000 2200 2500]]
     #_
     (trigger-request-wait-period :games)
-    (Thread/sleep 700)
+    ;; (Thread/sleep 700)
     (try
       (-> "https://explorer.lichess.ovh/"
           (str (name group))
@@ -96,14 +97,19 @@
    movesets))
 
 (defn- select-options
-  [movesets color]
+  [movesets color move-choice-pct]
   (reduce
    (fn [acc {:keys [moves pct] :as moveset}]
      (if-let [new-moves (strategy/select-option
                          {:moves   moves
-                          :masters  (moves->options :masters moves)
+                          :move-choice-pct move-choice-pct
+                          ;; :masters  (moves->options :masters moves)
                           :lichess (moves->options :lichess moves)
-                          :engine  [] ;; TODO: pull in engine analyzed moves
+                          :engine  (ngn/moves->engine-options
+                                    {:moves moves
+                                     :depth 20
+                                     :m-count 10
+                                     :allowable-loss 100})
                           :color   color})]
        (update acc 1 conj (assoc moveset :moves new-moves))
        (update acc 0 conj moves)))
@@ -111,8 +117,9 @@
    movesets))
 
 (defn build-repertoire
-  [{:keys [color moves filter-pct]
-    :or   {filter-pct 0.1}}]
+  [{:keys [color moves filter-pct move-choice-pct]
+    :or   {filter-pct 0.01
+           move-choice-pct 0.01}}]
   (loop [exhausted []
          movesets  [{:moves moves
                      :pct   1.0}]]
@@ -125,11 +132,13 @@
                :moves
                util/whose-turn?
                (= color))
-        (let [[new-exhausted movesets] (select-options movesets color)]
+        (let [[new-exhausted movesets]
+              (select-options movesets color move-choice-pct)]
           (recur
            (into exhausted new-exhausted)
            movesets))
-        (let [[new-exhausted movesets] (expand-movesets movesets filter-pct)]
+        (let [[new-exhausted movesets]
+              (expand-movesets movesets filter-pct)]
           (recur
            (into exhausted new-exhausted)
            movesets))))))
@@ -138,10 +147,12 @@
 
   (let [color :white
         moves ["e2e4" "c7c5" "g1f3"]
-        filter-pct 0.01]
+        filter-pct 0.01
+        move-choice-pct 0.01]
     (-> {:color color
          :moves moves
-         :filter-pct filter-pct}
+         :filter-pct filter-pct
+         :move-choice-pct move-choice-pct}
         build-repertoire
         export/export-repertoire))
   )
