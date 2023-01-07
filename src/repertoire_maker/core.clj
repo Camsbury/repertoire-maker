@@ -8,23 +8,23 @@
    [clojure.string :as str]
    [clj-http.client :as http]))
 
-(def request-wait-periods
-  {:games 700})
+;; (def request-wait-periods
+;;   {:games 700})
 
-(def request-wait-state
-  {:games (agent 0)})
+;; (def request-wait-state
+;;   {:games (agent 0)})
 
-(defn- trigger-request-wait-period
-  [endpoint]
-  (let [state (get request-wait-state endpoint)]
-    (Thread/sleep (max @state 0))
-    (send state (fn [_] (get request-wait-periods endpoint)))
-    (thread
-      (loop []
-        (Thread/sleep 100)
-        (when (< 0 @state)
-          (send state #(- % 100))
-          (recur))))))
+;; (defn- trigger-request-wait-period
+;;   [endpoint]
+;;   (let [state (get request-wait-state endpoint)]
+;;     (Thread/sleep (max @state 0))
+;;     (send state (fn [_] (get request-wait-periods endpoint)))
+;;     (thread
+;;       (loop []
+;;         (Thread/sleep 100)
+;;         (when (< 0 @state)
+;;           (send state #(- % 100))
+;;           (recur))))))
 
 (defn- total-option
   [{:keys [white draws black]}]
@@ -50,7 +50,9 @@
     (mapv #(process-option total-count %) options)))
 
 (defn moves->options
-  [group moves]
+  [{:keys [group since player]
+    :or   {since  "1952-01"}}
+   moves]
   (let [speeds  ["bullet" "blitz" "rapid"]
         ratings [2000 2200 2500]]
     #_
@@ -68,7 +70,13 @@
               (merge
                {:recentGames 0
                 :speeds      (str/join "," speeds)
-                :ratings     (str/join "," ratings)}))})
+                :ratings     (str/join "," ratings)})
+              (= group :player)
+              (merge
+               {:recentGames 0
+                :player      player
+                :since       since
+                :speeds      (str/join "," speeds)}))})
           :body
           util/from-json
           :moves
@@ -81,7 +89,7 @@
 (defn- expand-moves
   [moves parent-pct filter-pct]
   (->> moves
-       (moves->options :lichess)
+       (moves->options {:group :lichess})
        (filter #(< filter-pct (* parent-pct (:play-pct %))))
        (map (fn [move] {:moves (conj moves (:uci move))
                         :pct   (* parent-pct (:play-pct move))}))))
@@ -97,29 +105,51 @@
    movesets))
 
 (defn- select-options
-  [{:keys [movesets color move-choice-pct overrides]}]
+  [{:keys [allowable-loss
+           color
+           move-choice-pct
+           movesets
+           overrides
+           player
+           since]}]
   (reduce
    (fn [acc {:keys [moves pct] :as moveset}]
      (if-let [new-moves (strategy/select-option
-                         {:moves           moves
-                          :move-choice-pct move-choice-pct
-                          ;; :masters  (moves->options :masters moves)
-                          :lichess         (moves->options :lichess moves)
-                          :engine          (ngn/moves->engine-options
-                                            {:moves          moves
-                                             :m-count        10
-                                             :allowable-loss 100})
-                          :overrides       overrides
-                          :color           color})]
+                         (cond->
+                             {:moves           moves
+                              :move-choice-pct move-choice-pct
+                              ;; :masters  (moves->options {:group :masters} moves)
+                              :lichess         (moves->options {:group :lichess} moves)
+                              :engine          (ngn/moves->engine-options
+                                                {:moves          moves
+                                                 :m-count        10
+                                                 :allowable-loss allowable-loss})
+                              :overrides       overrides
+                              :color           color}
+                           (some? player)
+                           (assoc :player (moves->options
+                                           {:group  :player
+                                            :player player
+                                            :since  since}
+                                           moves))))]
        (update acc 1 conj (assoc moveset :moves new-moves))
        (update acc 0 conj moves)))
    [[] []]
    movesets))
 
 (defn build-repertoire
-  [{:keys [color moves filter-pct move-choice-pct overrides]
-    :or   {filter-pct      0.01
-           move-choice-pct 0.01}}]
+  [{:keys [allowable-loss
+           color
+           filter-pct
+           move-choice-pct
+           moves
+           overrides
+           player
+           since]
+    :or   {allowable-loss  100
+           filter-pct      0.01
+           move-choice-pct 0.01
+           since           "1952-01"}}]
   (loop [exhausted []
          movesets  [{:moves moves
                      :pct   1.0}]]
@@ -134,10 +164,13 @@
                (= color))
         (let [[new-exhausted movesets]
               (select-options
-               {:movesets        movesets
+               {:allowable-loss  allowable-loss
                 :color           color
+                :move-choice-pct move-choice-pct
+                :movesets        movesets
                 :overrides       overrides
-                :move-choice-pct move-choice-pct})]
+                :player          player
+                :since           since})]
           (recur
            (into exhausted new-exhausted)
            movesets))
@@ -155,16 +188,20 @@
 
 (comment
 
-  (let [color           :white
-        moves           ["e2e4"]
+  (let [allowable-loss  100
+        color           :white
         filter-pct      0.005
         move-choice-pct 0.01
-        overrides       overrides]
-    (-> {:color           color
-         :moves           moves
+        moves           ["e2e4"]
+        overrides       overrides
+        player          "JackSilver"]
+    (-> {:allowable-loss  allowable-loss
+         :color           color
          :filter-pct      filter-pct
          :move-choice-pct move-choice-pct
-         :overrides       overrides}
+         :moves           moves
+         :overrides       overrides
+         :player          player}
         build-repertoire
         export/export-repertoire))
   )
