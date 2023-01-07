@@ -50,8 +50,8 @@
     (mapv #(process-option total-count %) options)))
 
 (defn moves->options
-  [{:keys [group since player]
-    :or   {since  "1952-01"}}
+  [{:keys [group since color player]
+    :or   {since "1952-01"}}
    moves]
   (let [speeds  ["bullet" "blitz" "rapid"]
         ratings [2000 2200 2500]]
@@ -75,6 +75,7 @@
               (merge
                {:recentGames 0
                 :player      player
+                :color       color
                 :since       since
                 :speeds      (str/join "," speeds)}))})
           :body
@@ -129,6 +130,7 @@
                            (some? player)
                            (assoc :player (moves->options
                                            {:group  :player
+                                            :color  (name color)
                                             :player player
                                             :since  since}
                                            moves))))]
