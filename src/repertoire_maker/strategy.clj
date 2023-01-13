@@ -3,6 +3,12 @@
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.util :as util]))
 
+(defn filter-engine
+  [engine-options move-options]
+  (if (seq? engine-options)
+    (filter #(contains? (set engine-options) (:uci %)) move-options)
+    move-options))
+
 ;; NOTE - could do some kind of statistical significance thing where we are
 ;; comparing distributions based on sample size to see the probability that
 ;; one is better than the other.
@@ -11,15 +17,21 @@
   (let [min-plays 100
         player-move
         (->> player
-             (filter #(contains? (set engine) (:uci %)))
+             (filter-engine engine)
              first
              :uci)
         lc-move
         (->> lichess
              (filter #(< min-plays (:play-count %)))
              (filter #(< move-choice-pct (:play-pct %)))
-             (filter #(contains? (set engine) (:uci %)))
+             (filter-engine engine)
              (sort-by (get {:black :white :white :black} color))
              first
              :uci)]
-    (conj moves (or (get overrides moves) player-move lc-move (first engine)))))
+    (some->>
+     (or
+      (get overrides moves)
+      player-move
+      lc-move
+      (first engine))
+     (conj moves))))
