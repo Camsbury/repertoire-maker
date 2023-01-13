@@ -55,7 +55,7 @@
         info   (py. engine
                     "analyse"
                     board
-                    (ngn/Limit :time 1)
+                    (ngn/Limit :depth 20)
                     :multipv m-count)
         moves  (->> info
                    (map #(uci-and-score :white %))
