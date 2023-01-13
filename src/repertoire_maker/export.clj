@@ -9,10 +9,39 @@
  '[chess     :as chess]
  '[chess.pgn :as pgn])
 
+(defn calc-depths
+  [depth move-tree]
+  (->> move-tree
+       (mapcat
+        (fn [[_ v]]
+          (if (seq v)
+            (calc-depths (inc depth) v)
+            [depth])))))
+
+(defn tree-width
+  [move-tree]
+  (->> move-tree
+       (map
+        (fn [[_ v]]
+          (if (seq v)
+            (tree-width v)
+            1)))
+       (reduce +)))
+
+(defn average-depth
+  [move-tree]
+  (double
+   (/
+    (reduce + (calc-depths 1 move-tree))
+    (tree-width move-tree))))
+
 (defn export-repertoire
   [movesets]
   (let [move-tree (reduce #(assoc-in %1 %2 nil) (ordered/ordered-map) movesets)
         game      (pgn/Game)]
+    ;; (println move-tree)
+    (println "average depth: " (average-depth move-tree))
+    (println "tree width: " (tree-width move-tree))
     ;;  traversal writing the game tree
     (loop [stack (mapv (fn [move] [[move] [game]]) (keys move-tree))]
       (when (seq stack)
