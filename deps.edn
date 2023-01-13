@@ -1,5 +1,6 @@
 {:paths ["src"]
  :deps  {camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
+         slingshot/slingshot                 {:mvn/version "0.12.2"}
          environ/environ                     {:mvn/version "1.2.0"}
          org.flatland/ordered                {:mvn/version "1.15.10"}
          clj-http/clj-http                   {:mvn/version "3.12.3"}
