@@ -1,2 +1,4 @@
 {:lint-as
- {libpython-clj2.require/require-python clojure.core/require}}
+ {libpython-clj2.require/require-python clojure.core/require
+  slingshot.slingshot/try+ clojure.core/try
+  slingshot.slingshot/throw+ clojure.core/throw}}

@@ -1,13 +1,26 @@
 (ns repertoire-maker.core
   (:require
+   [taoensso.timbre :as log]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.export :as export]
    [repertoire-maker.strategy :as strategy]
    [repertoire-maker.util :as util]
    [slingshot.slingshot :refer [try+ throw+]]
-   [clojure.core.async :refer [thread]]
    [clojure.string :as str]
    [clj-http.client :as http]))
+
+(def urls
+  {:local "http://localhost:9002/"
+   :public "https://explorer.lichess.ovh/"})
+
+(def defaults
+  {:history
+   {:ratings      [2000 2200 2500]
+    :speeds       ["bullet" "blitz" "rapid"]
+    :moves        30
+    :top-games    0
+    :recent-games 0
+    :since   "1952-01"}})
 
 (defn- total-option
   [{:keys [white draws black]}]
@@ -34,30 +47,30 @@
 
 (defn moves->options
   [{:keys [group since color player local?]
-    :or   {since "1952-01"}
+    :or   {since (get-in defaults [:history :since])}
     :as   opts}
    moves]
-  (let [speeds  ["bullet" "blitz" "rapid"]
-        ratings [2000 2200 2500]
+  (let [speeds  (get-in defaults [:history :speeds])
+        ratings (get-in defaults [:history :ratings])
         url     (if local?
-                  "http://localhost:9002/"
-                  "https://explorer.lichess.ovh/")]
+                  (:local urls)
+                  (:public urls))]
     (try+
      (-> url
          (str (name group))
          (http/get
           {:query-params
-           (cond-> {:moves 30
-                    :topGames 0
+           (cond-> {:moves (get-in defaults [:history :moves])
+                    :topGames (get-in defaults [:history :top-games])
                     :play (str/join "," moves)}
              (= group :lichess)
              (merge
-              {:recentGames 0
+              {:recentGames (get-in defaults [:history :recent-games])
                :speeds      (str/join "," speeds)
                :ratings     (str/join "," ratings)})
              (= group :player)
              (merge
-              {:recentGames 0
+              {:recentGames (get-in defaults [:history :recent-games])
                :player      player
                :color       color
                :since       since
@@ -67,6 +80,7 @@
          :moves
          process-options)
      (catch [:status 429] _
+       (log/info "Hit the book rate limit. Waiting one minute before resuming requests.")
        (Thread/sleep 60000)
        (moves->options opts moves))
      (catch Object _
@@ -164,7 +178,7 @@
                                :local? local?})
                              (filter #(= move (:uci %)))
                              first)]
-          {:pct (* pct (:pct move-eval))
+          {:pct (* pct (:play-pct move-eval))
            :stack (conj stack move)})))
     {:pct 1.0 :stack []}
     moves)))
@@ -277,7 +291,6 @@
          :color           :white
          :filter-pct      0.001
          :move-choice-pct 0.01
-         #_#_
          :local?          true}]
     (doall
      (map #(build-and-export (assoc config :moves %))

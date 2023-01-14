@@ -1,5 +1,10 @@
 let
-  pkgs = import <nixpkgs> {};
+  pkgs = import <nixpkgs> {
+    overlays = [(import ./overlays.nix)];
+  };
+  # pkgs = import ./pinned.nix {
+  #   overlays = [(import ./overlays.nix)];
+  # };
   python-custom = (pkgs.python3.withPackages (
         pythonPackages: with pythonPackages; [
           chess
@@ -12,6 +17,7 @@ in
       clj-kondo
       python-custom
       stockfish
+      neil
     ];
     shellHooks = ''
       export PYTHON_HOME=${python-custom}
