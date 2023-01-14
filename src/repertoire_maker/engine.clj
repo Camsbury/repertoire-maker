@@ -48,10 +48,10 @@
          (mapv :uci))))
 
 (defn moves->engine-options
-  [{:keys [moves m-count allowable-loss]}]
+  [{:keys [moves move-count depth allowable-loss hash threads]}]
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
-        _      (py. engine "configure" (py/->py-dict {"Hash"    2048
-                                                      "Threads" 7}))
+        _      (py. engine "configure" (py/->py-dict {"Hash"    hash
+                                                      "Threads" threads}))
         board  (chess/Board)
         _      (reduce
                 (fn [_ move] (py. board "push" (py. chess/Move "from_uci" move)))
@@ -60,8 +60,8 @@
         info   (py. engine
                     "analyse"
                     board
-                    (ngn/Limit :depth 20)
-                    :multipv m-count)
+                    (ngn/Limit :depth depth)
+                    :multipv move-count)
         moves  (->> info
                    (map #(uci-and-score :white %))
                    (extract-filtered-moves allowable-loss))]
@@ -69,12 +69,6 @@
     moves))
 
 (comment
-
-  (moves->engine-options
-   {:moves ["e2e4" "c7c5" "g1f3" "b8c6"]
-    :depth 20
-    :m-count 10
-    :allowable-loss 100})
 
 
   )

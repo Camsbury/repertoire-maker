@@ -14,13 +14,18 @@
    :public "https://explorer.lichess.ovh/"})
 
 (def defaults
-  {:history
+  {:engine
+   {:move-count 10
+    :depth      20
+    :hash       2048
+    :threads    7}
+   :history
    {:ratings      [2000 2200 2500]
     :speeds       ["bullet" "blitz" "rapid"]
     :moves        30
     :top-games    0
     :recent-games 0
-    :since   "1952-01"}})
+    :since        "1952-01"}})
 
 (defn- total-option
   [{:keys [white draws black]}]
@@ -72,7 +77,7 @@
              (merge
               {:recentGames (get-in defaults [:history :recent-games])
                :player      player
-               :color       color
+               :color       (name color)
                :since       since
                :speeds      (str/join "," speeds)}))})
          :body
@@ -120,7 +125,7 @@
            since
            use-engine?]}]
   (reduce
-   (fn [acc {:keys [moves pct] :as moveset}]
+   (fn [acc {:keys [moves] :as moveset}]
      (if-let [new-moves
               (strategy/select-option
                (cond->
@@ -136,15 +141,18 @@
                                       moves)
                     :engine          (when use-engine?
                                        (ngn/moves->engine-options
-                                        {:moves          moves
-                                         :m-count        10
-                                         :allowable-loss allowable-loss}))
+                                        (-> defaults
+                                            :engine
+                                            (assoc :moves
+                                                   moves)
+                                            (assoc :allowable-loss
+                                                   allowable-loss))))
                     :overrides       overrides
                     :color           color}
                  (some? player)
                  (assoc :player (moves->options
                                  {:group  :player
-                                  :color  (name color)
+                                  :color  color
                                   :player player
                                   :since  since
                                   :local? local?}
