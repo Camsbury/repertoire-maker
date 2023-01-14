@@ -1,4 +1,4 @@
-{:paths ["src"]
+{:paths ["src" "test"]
  :deps  {camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
          slingshot/slingshot                 {:mvn/version "0.12.2"}
          environ/environ                     {:mvn/version "1.2.0"}
@@ -6,4 +6,5 @@
          clj-http/clj-http                   {:mvn/version "3.12.3"}
          com.taoensso/timbre                 {:mvn/version "4.10.0"}
          clj-python/libpython-clj            {:mvn/version "2.020"}
-         wing/wing                           {:mvn/version "0.1.4"}}}
+         wing/wing                           {:mvn/version "0.1.4"}
+         lambdaisland/kaocha                 {:mvn/version "1.72.1136"}}}

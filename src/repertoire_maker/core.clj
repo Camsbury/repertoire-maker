@@ -13,7 +13,7 @@
   [{:keys [white draws black]}]
   (+ white draws black))
 
-(defn- process-option
+(defn process-option
   [total-count {:keys [uci white draws black] :as option}]
   (let [total (total-option option)
         white (float (/ white total))
@@ -24,7 +24,7 @@
      :play-count total
      :play-pct   (float (/ total total-count))}))
 
-(defn- process-options
+(defn process-options
   [options]
   (let [total-count
         (->> options
@@ -151,6 +151,24 @@
             [base tip])))
        (into {})))
 
+(defn- calc-prob
+  [{:keys [moves color local?]}]
+  (:pct
+   (reduce
+    (fn [{:keys [pct stack]} move]
+      (if (= color (util/whose-turn? stack))
+        {:pct pct :stack (conj stack move)}
+        (let [move-eval (->> stack
+                             (moves->options
+                              {:group :lichess
+                               :local? local?})
+                             (filter #(= move (:uci %)))
+                             first)]
+          {:pct (* pct (:pct move-eval))
+           :stack (conj stack move)})))
+    {:pct 1.0 :stack []}
+    moves)))
+
 (defn build-repertoire
   [{:keys [allowable-loss
            color
@@ -165,11 +183,16 @@
     :or   {allowable-loss  100
            filter-pct      0.01
            move-choice-pct 0.01
-           since           "1952-01"}}]
+           since           "1952-01"}
+    :as   opts}]
   (loop [exhausted []
-         movesets  [{:moves (util/sans->ucis moves)
-                     :pct   1.0}]]
+         movesets  [{:moves moves
+                     :pct   (calc-prob opts)}]]
     (if (empty? movesets)
+      ;; this is where things are returned, but I want to do more analysis
+      ;; win%
+      ;; probability played
+      ;; engine eval (if present)
       (->> movesets
            (into exhausted (map :moves))
            (sort-by count >))
@@ -185,7 +208,7 @@
                 :local?          local?
                 :move-choice-pct move-choice-pct
                 :movesets        movesets
-                :overrides       (overrides->uci overrides)
+                :overrides       overrides
                 :player          player
                 :since           since
                 :use-engine?     use-engine?})]
@@ -213,6 +236,8 @@
 (defn build-and-export
   [config]
   (-> config
+      (update :moves util/sans->ucis)
+      (update :overrides overrides->uci)
       build-repertoire
       export/export-repertoire))
 
@@ -221,59 +246,44 @@
   (-> "http://localhost:9002/lichess"
       (http/get
        {:query-params
-        {:moves 30
-         :topGames 0
-         :play "d2d4,g8f6,c2c4"
+        {:moves       30
+         :topGames    0
+         :play        "d2d4,g8f6,c2c4"
          :recentGames 0
-         :speeds "bullet,blitz,rapid"
-         :ratings "2000,2200,2500"}})
+         :speeds      "bullet,blitz,rapid"
+         :ratings     "2000,2200,2500"}})
       :body
       util/from-json
       :moves
       process-options)
 
-  ;; test for API speed:
-  ;; (time
-  ;;  (let [moves (atom []) exit (atom false)]
-  ;;    (loop []
-  ;;      (try+
-  ;;       (let [move
-  ;;             (->
-  ;;              (http/get
-  ;;               "https://explorer.lichess.ovh/lichess"
-  ;;               {:query-params
-  ;;                {:moves 30
-  ;;                 :topGames 0
-  ;;                 :play (str/join "," @moves)
-  ;;                 :recentGames 0
-  ;;                 :speeds "bullet,blitz,rapid"
-  ;;                 :ratings "2000,2200,2500"}})
-  ;;              :body
-  ;;              util/from-json
-  ;;              :moves
-  ;;              process-options
-  ;;              first
-  ;;              :uci)]
-  ;;         (swap! moves conj move))
-  ;;       (catch [:status 429] _
-  ;;         (reset! exit true)))
-  ;;      (if-not (or @exit (nil? (last @moves)))
-  ;;        (recur)
-  ;;        (println (count @moves))))))
-
-  (let [repertoire-config
+  (let [config
         {:allowable-loss  10
          :color           :white
          :filter-pct      0.01
          :move-choice-pct 0.01
-         :moves           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
-         ;; :use-engine?     true
+         :moves           ["e4" "e5" "Nf3" "Nc6" "Bb5"]
+         #_#_
+         :use-engine?     true
          :local?          true
-         #_#_#_#_
+         #_#_
          :overrides       overrides
+         #_#_
          :player          "JackSilver"}]
-    (-> repertoire-config
-        build-repertoire
-        export/export-repertoire))
+    (build-and-export config))
+
+  (let [config
+        {:allowable-loss  10
+         :color           :white
+         :filter-pct      0.001
+         :move-choice-pct 0.01
+         #_#_
+         :local?          true}]
+    (doall
+     (map #(build-and-export (assoc config :moves %))
+          [["e4" "e5" "Nf3" "Nc6" "Bb5"]
+           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
+           ["e4" "e5" "Nf3" "Nc6" "d4"]
+           ["e4" "e5" "Nf3" "Nc6" "Nc3"]])))
 
   )
