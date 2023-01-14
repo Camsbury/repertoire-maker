@@ -14,11 +14,15 @@
    :public "https://explorer.lichess.ovh/"})
 
 (def defaults
-  {:engine
-   {:move-count 10
-    :depth      20
-    :hash       2048
-    :threads    7}
+  {:algo
+   {:filter-pct      0.01
+    :move-choice-pct 0.01}
+   :engine
+   {:allowable-loss 100
+    :move-count     10
+    :depth          20
+    :hash           2048
+    :threads        7}
    :history
    {:ratings      [2000 2200 2500]
     :speeds       ["bullet" "blitz" "rapid"]
@@ -202,10 +206,10 @@
            player
            since
            use-engine?]
-    :or   {allowable-loss  100
-           filter-pct      0.01
-           move-choice-pct 0.01
-           since           "1952-01"}
+    :or   {allowable-loss  (get-in defaults [:engine :allowable-loss])
+           filter-pct      (get-in defaults [:algo :filter-pct])
+           move-choice-pct (get-in defaults [:algo :move-choice-pct])
+           since           (get-in defaults [:history :since])}
     :as   opts}]
   (loop [exhausted []
          movesets  [{:moves moves
