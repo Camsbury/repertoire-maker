@@ -20,9 +20,14 @@
 
 (defn parse-score
   [score]
-  (-> score
-      (str/replace #"\+" "")
-      (Integer/parseInt)))
+  (if (str/includes? score "#")
+    (/ 1e6
+       (-> score
+           (str/replace #"#" "")
+           (Integer/parseInt)))
+    (-> score
+        (str/replace #"\+" "")
+        (Integer/parseInt))))
 
 (defn uci-and-score
   [color option]
