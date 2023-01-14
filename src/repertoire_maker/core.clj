@@ -185,7 +185,7 @@
                 :local?          local?
                 :move-choice-pct move-choice-pct
                 :movesets        movesets
-                :overrides       (->uci-overrides overrides)
+                :overrides       (overrides->uci overrides)
                 :player          player
                 :since           since
                 :use-engine?     use-engine?})]
@@ -209,6 +209,12 @@
    ["d4" "f5"]                       "e4"
    ["d4" "b6"]                       "e4"
    ["d4" "d5" "c4" "c6" "Nf3" "Nf6"] "Qc2"})
+
+(defn build-and-export
+  [config]
+  (-> config
+      build-repertoire
+      export/export-repertoire))
 
 (comment
 
