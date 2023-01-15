@@ -18,7 +18,7 @@
    {:filter-pct      0.01
     :move-choice-pct 0.01}
    :engine
-   {:allowable-loss 100
+   {:allowable-loss 0.9
     :move-count     10
     :depth          20
     :hash           2048
@@ -264,7 +264,7 @@
       process-options)
 
   (let [config
-        {:allowable-loss  10
+        {:allowable-loss  0.9
          :color           :white
          :filter-pct      0.01
          :move-choice-pct 0.01
@@ -279,7 +279,7 @@
     (build-and-export config))
 
   (let [config
-        {:allowable-loss  10
+        {:allowable-loss  0.9
          :color           :white
          :filter-pct      0.001
          :move-choice-pct 0.01

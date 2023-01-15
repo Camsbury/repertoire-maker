@@ -12,6 +12,11 @@
 
 (def stockfish-path (env :stockfish-path))
 
+(defn sigmoid
+  "normalizes a number a range between 0 and 1"
+  [x]
+  (/ 1 (+ 1 (Math/exp (* -1 x)))))
+
 (defn color-score
   [score color]
   (if (= color :white)
@@ -21,13 +26,19 @@
 (defn parse-score
   [score]
   (if (str/includes? score "#")
-    (/ 1e6
-       (-> score
-           (str/replace #"#" "")
-           (Integer/parseInt)))
+    ;; inverting the mate score prioritizes lower move mates
+    ;; adding 1 ensures that the score is always higher than a centipawn score
+    (+ 1
+       (/ 1
+          (-> score
+              (str/replace #"#" "")
+              (Integer/parseInt))))
+    ;; this is normalized via the sigmoid function to bound it and provide
+    ;; a percent likelihood of winning given the current state
     (-> score
         (str/replace #"\+" "")
-        (Integer/parseInt))))
+        (Integer/parseInt)
+        sigmoid)))
 
 (defn uci-and-score
   [color option]
@@ -44,7 +55,7 @@
   [allowable-loss options]
   (let [best-score (->> options first :score)]
     (->> options
-         (filter #(> allowable-loss (- best-score (:score %))))
+         (filter #(> allowable-loss (/ (:score %) best-score)))
          (mapv :uci))))
 
 (defn moves->engine-options
