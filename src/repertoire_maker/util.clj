@@ -49,7 +49,14 @@
 
 (defn add-tree-branch
   [tree moves]
-  (oassoc-in tree (interpose :responses moves) {:responses nil}))
+  (oassoc-in tree (interpose :responses moves) nil))
+
+(defn get-in-tree
+  [tree moves]
+  (get-in tree (-> :responses
+                   (interpose moves)
+                   vec
+                   (conj :responses))))
 
 (comment
   (sans->fen ["e4" "e5" "Nf3"])

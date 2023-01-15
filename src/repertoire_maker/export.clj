@@ -1,6 +1,7 @@
 (ns repertoire-maker.export
   (:require
    [python-base]
+   [repertoire-maker.util :as util]
    [flatland.ordered.map  :as ordered]
    [libpython-clj2.python :refer [py.]]
    [libpython-clj2.require :refer [require-python]]))
@@ -36,10 +37,9 @@
     (tree-width move-tree))))
 
 (defn export-repertoire
-  [movesets]
-  (let [move-tree (reduce #(assoc-in %1 %2 nil) (ordered/ordered-map) movesets)
-        game      (pgn/Game)]
-    ;; (println move-tree)
+  [move-tree]
+  (let [game (pgn/Game)]
+    (println move-tree)
     (println "average depth: " (average-depth move-tree))
     (println "tree width: " (tree-width move-tree))
     ;;  traversal writing the game tree
@@ -50,7 +50,7 @@
                                   (py. (last nodes)
                                        "add_variation"
                                        (py. chess/Move "from_uci" (last moves))))
-              next          (keys (get-in move-tree moves))]
+              next          (keys (util/get-in-tree move-tree moves))]
           (if (seq next)
             (recur
              (reduce

@@ -88,8 +88,7 @@
                         :pct   (* parent-pct (:play-pct move))}))))
 
 (defn- expand-movesets
-  [{:keys [exhausted
-           filter-pct
+  [{:keys [filter-pct
            local?
            movesets
            tree]
@@ -103,17 +102,13 @@
                              :filter-pct filter-pct
                              :local?     local?}))]
        (update acc :movesets into moveset)
-       (update acc :exhausted conj moves)))
-   (merge
-    opts
-    {:exhausted exhausted
-     :movesets []})
+       acc))
+   (assoc opts :movesets [])
    movesets))
 
-(defn- select-options
+(defn- choose-moves
   [{:keys [allowable-loss
            color
-           exhausted
            local?
            movesets
            player
@@ -125,45 +120,45 @@
   (reduce
    (fn [acc {:keys [moves] :as moveset}]
      (if-let [new-moves
-              (strategy/select-option
-               (cond->
-                   (merge opts
-                          {:moves           moves
-                           #_#_
-                           :masters         (moves->options
-                                             {:group :masters
-                                              :local? local?}
-                                             moves)
-                           :lichess         (moves->options
-                                             {:group :lichess
-                                              :local? local?}
-                                             moves)
-                           :engine          (when use-engine?
-                                              (ngn/moves->engine-options
-                                               (-> defaults
-                                                   :engine
-                                                   (assoc :moves
-                                                          moves)
-                                                   (assoc :allowable-loss
-                                                          allowable-loss))))})
-                 (some? player)
-                 (assoc :player (moves->options
-                                 {:group  :player
-                                  :color  color
-                                  :player player
-                                  :since  since
-                                  :local? local?}
-                                 moves))))]
+              (-> opts
+                  (merge
+                   {:moves           moves
+                    #_#_
+                    :masters         (moves->options
+                                      {:group :masters
+                                       :local? local?}
+                                      moves)
+                    :lichess         (moves->options
+                                      {:group :lichess
+                                       :local? local?}
+                                      moves)
+                    :engine          (when use-engine?
+                                       (ngn/moves->engine-options
+                                        (-> defaults
+                                            :engine
+                                            (assoc :moves
+                                                   moves)
+                                            (assoc :allowable-loss
+                                                   allowable-loss))))})
+                  (cond->
+                      (some? player)
+                    (assoc :player (moves->options
+                                    {:group  :player
+                                     :color  color
+                                     :player player
+                                     :since  since
+                                     :local? local?}
+                                    moves)))
+                  strategy/choose-move
+                  :moves)]
        ;; want to update this to take all the move data into the tree...
        ;; but currently new-moves are only the ucis!
        ;; this is likely the same in expand movesets
        (-> acc
+           (update :tree util/add-tree-branch new-moves)
            (update :movesets conj (assoc moveset :moves new-moves)))
-       (-> acc
-           (update :exhausted conj moves))))
-   (merge opts
-          {:exhausted exhausted
-           :movesets []})
+       acc))
+   (assoc opts :movesets [])
    movesets))
 
 (defn- overrides->uci
@@ -200,7 +195,6 @@
   (loop [opts
          (merge opts
                 {:tree (util/add-tree-branch nil moves)
-                 :exhausted []
                  :movesets  [{:moves moves
                               :pct   (calc-prob opts)}]})]
     (let [move-selector
@@ -210,14 +204,14 @@
                    :moves
                    util/whose-turn?
                    (= color))
-            select-options
+            choose-moves
             expand-movesets)]
       (if (empty? (:movesets opts))
-        ;; TODO: include win% and engine eval in "exhausted" as well
+        ;; TODO: include win% and engine eval in the move tree as well
         ;; (do a max on 1 and score for moves on eval calc)
         ;; TODO: do depth first traversal to fill out the lines in the natural
         ;; order, then sorting here is unnecessary
-        (:exhausted opts)
+        (:tree opts)
         (recur (move-selector opts))))))
 
 (def overrides
@@ -256,9 +250,9 @@
   (let [config
         {:allowable-loss  0.9
          :color           :white
-         :filter-pct      0.01
+         :filter-pct      0.05
          :move-choice-pct 0.01
-         :moves           ["e4" "e5" "Nf3" "Nc6" "Bb5"]
+         :moves           ["e4"]
          #_#_
          :use-engine?     true
          :local?          true

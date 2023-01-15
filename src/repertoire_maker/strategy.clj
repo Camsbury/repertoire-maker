@@ -11,7 +11,7 @@
 ;; NOTE - could do some kind of statistical significance thing where we are
 ;; comparing distributions based on sample size to see the probability that
 ;; one is better than the other.
-(defn select-option
+(defn choose-move
   [{:keys [color
            engine
            lichess
@@ -28,18 +28,20 @@
              (filter-engine engine)
              first
              :uci)
-        lc-move
-        (->> lichess
-             (filter #(< min-plays (:play-count %)))
-             (filter #(< move-choice-pct (:play-pct %)))
-             (filter-engine engine)
-             (sort-by (get {:black :white :white :black} color))
-             first
-             :uci)]
-    (some->>
-     (or
-      (get overrides moves)
-      player-move
-      lc-move
-      (first engine))
-     (conj moves))))
+        overridden-move (get overrides moves)
+        chosen-move
+        (cond
+          (some? overridden-move)
+          (->> lichess (filter #(= overridden-move (:uci %))) first)
+
+          (some? player-move)
+          (->> lichess (filter #(= player-move (:uci %))) first)
+
+          :else
+          (->> lichess
+               (filter #(< min-plays (:play-count %)))
+               (filter #(< move-choice-pct (:play-pct %)))
+               (filter-engine engine)
+               (sort-by (get {:black :white :white :black} color))
+               first))]
+    (assoc chosen-move :moves (conj moves (:uci chosen-move)))))
