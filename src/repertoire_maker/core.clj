@@ -105,7 +105,8 @@
                         :pct   (* parent-pct (:play-pct move))}))))
 
 (defn- expand-movesets
-  [{:keys [movesets filter-pct local?]}]
+  [{:keys [movesets filter-pct local?]
+    :or   {filter-pct (get-in defaults [:algo :filter-pct])}}]
   (reduce
    (fn [acc {:keys [moves pct]}]
      (if-let [moveset (seq (expand-moves
@@ -127,7 +128,10 @@
            overrides
            player
            since
-           use-engine?]}]
+           use-engine?]
+    :or   {allowable-loss  (get-in defaults [:engine :allowable-loss])
+           move-choice-pct (get-in defaults [:algo :move-choice-pct])
+           since           (get-in defaults [:history :since])}}]
   (reduce
    (fn [acc {:keys [moves] :as moveset}]
      (if-let [new-moves
@@ -196,59 +200,35 @@
     moves)))
 
 (defn build-repertoire
-  [{:keys [allowable-loss
-           color
-           filter-pct
-           local?
-           move-choice-pct
-           moves
-           overrides
-           player
-           since
-           use-engine?]
-    :or   {allowable-loss  (get-in defaults [:engine :allowable-loss])
-           filter-pct      (get-in defaults [:algo :filter-pct])
-           move-choice-pct (get-in defaults [:algo :move-choice-pct])
-           since           (get-in defaults [:history :since])}
-    :as   opts}]
+  [{:keys [color moves] :as opts}]
   (loop [exhausted []
          movesets  [{:moves moves
                      :pct   (calc-prob opts)}]]
-    (if (empty? movesets)
-      ;; this is where things are returned, but I want to do more analysis
-      ;; win%
-      ;; probability played
-      ;; engine eval (if present)
-      (->> movesets
-           (into exhausted (map :moves))
-           (sort-by count >))
-      (if (->> movesets
-               first
-               :moves
-               util/whose-turn?
-               (= color))
-        (let [[new-exhausted movesets]
-              (select-options
-               {:allowable-loss  allowable-loss
-                :color           color
-                :local?          local?
-                :move-choice-pct move-choice-pct
-                :movesets        movesets
-                :overrides       overrides
-                :player          player
-                :since           since
-                :use-engine?     use-engine?})]
-          (recur
-           (into exhausted new-exhausted)
-           movesets))
-        (let [[new-exhausted movesets]
-              (expand-movesets
-               {:movesets   movesets
-                :filter-pct filter-pct
-                :local?     local?})]
-          (recur
-           (into exhausted new-exhausted)
-           movesets))))))
+    (let [opts (assoc opts :movesets movesets)]
+      (if (empty? movesets)
+        ;; this is where things are returned, but I want to do more analysis
+        ;; win%
+        ;; probability played
+        ;; engine eval (if present)
+        (->> movesets
+             (into exhausted (map :moves))
+             (sort-by count >))
+        (if (->> movesets
+                 first
+                 :moves
+                 util/whose-turn?
+                 (= color))
+          (let [[new-exhausted movesets]
+                (select-options
+                 opts)]
+            (recur
+             (into exhausted new-exhausted)
+             movesets))
+          (let [[new-exhausted movesets]
+                (expand-movesets opts)]
+            (recur
+             (into exhausted new-exhausted)
+             movesets)))))))
 
 (def overrides
   {["e4" "e5"]                       "Nf3"
