@@ -1,7 +1,6 @@
 (ns repertoire-maker.strategy
   (:require
-   [repertoire-maker.engine :as ngn]
-   [repertoire-maker.util :as util]))
+   [repertoire-maker.default :refer [defaults]]))
 
 (defn filter-engine
   [engine-options move-options]
@@ -13,9 +12,18 @@
 ;; comparing distributions based on sample size to see the probability that
 ;; one is better than the other.
 (defn select-option
-  [{:keys [moves move-choice-pct masters lichess player engine color overrides]}]
-  (let [min-plays 100
-        player-move
+  [{:keys [color
+           engine
+           lichess
+           masters
+           min-plays
+           move-choice-pct
+           moves
+           overrides
+           player]
+    :or   {min-plays       (get-in defaults [:algo :min-plays])
+           move-choice-pct (get-in defaults [:algo :move-choice-pct])}}]
+  (let [player-move
         (->> player
              (filter-engine engine)
              first

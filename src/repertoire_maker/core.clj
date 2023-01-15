@@ -1,6 +1,7 @@
 (ns repertoire-maker.core
   (:require
    [taoensso.timbre :as log]
+   [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.export :as export]
    [repertoire-maker.strategy :as strategy]
@@ -12,24 +13,6 @@
 (def urls
   {:local "http://localhost:9002/"
    :public "https://explorer.lichess.ovh/"})
-
-(def defaults
-  {:algo
-   {:filter-pct      0.01
-    :move-choice-pct 0.01}
-   :engine
-   {:allowable-loss 0.9
-    :move-count     10
-    :depth          20
-    :hash           2048
-    :threads        7}
-   :history
-   {:ratings      [2000 2200 2500]
-    :speeds       ["bullet" "blitz" "rapid"]
-    :moves        30
-    :top-games    0
-    :recent-games 0
-    :since        "1952-01"}})
 
 (defn- total-option
   [{:keys [white draws black]}]
@@ -123,40 +106,37 @@
   [{:keys [allowable-loss
            color
            local?
-           move-choice-pct
            movesets
-           overrides
            player
            since
            use-engine?]
     :or   {allowable-loss  (get-in defaults [:engine :allowable-loss])
-           move-choice-pct (get-in defaults [:algo :move-choice-pct])
-           since           (get-in defaults [:history :since])}}]
+           since           (get-in defaults [:history :since])}
+    :as   opts}]
   (reduce
    (fn [acc {:keys [moves] :as moveset}]
      (if-let [new-moves
               (strategy/select-option
                (cond->
-                   {:moves           moves
-                    :move-choice-pct move-choice-pct
-                    ;; :masters         (moves->options
-                    ;;                   {:group :masters
-                    ;;                    :local? local?}
-                    ;;                   moves)
-                    :lichess         (moves->options
-                                      {:group :lichess
-                                       :local? local?}
-                                      moves)
-                    :engine          (when use-engine?
-                                       (ngn/moves->engine-options
-                                        (-> defaults
-                                            :engine
-                                            (assoc :moves
-                                                   moves)
-                                            (assoc :allowable-loss
-                                                   allowable-loss))))
-                    :overrides       overrides
-                    :color           color}
+                   (merge opts
+                          {:moves           moves
+                           #_#_
+                           :masters         (moves->options
+                                             {:group :masters
+                                              :local? local?}
+                                             moves)
+                           :lichess         (moves->options
+                                             {:group :lichess
+                                              :local? local?}
+                                             moves)
+                           :engine          (when use-engine?
+                                              (ngn/moves->engine-options
+                                               (-> defaults
+                                                   :engine
+                                                   (assoc :moves
+                                                          moves)
+                                                   (assoc :allowable-loss
+                                                          allowable-loss))))})
                  (some? player)
                  (assoc :player (moves->options
                                  {:group  :player
@@ -204,31 +184,25 @@
   (loop [exhausted []
          movesets  [{:moves moves
                      :pct   (calc-prob opts)}]]
-    (let [opts (assoc opts :movesets movesets)]
+    (let [opts (assoc opts :movesets movesets)
+          move-selector (if (->> movesets
+                                 first
+                                 :moves
+                                 util/whose-turn?
+                                 (= color))
+                          select-options
+                          expand-movesets)]
       (if (empty? movesets)
-        ;; this is where things are returned, but I want to do more analysis
-        ;; win%
-        ;; probability played
-        ;; engine eval (if present)
-        (->> movesets
-             (into exhausted (map :moves))
-             (sort-by count >))
-        (if (->> movesets
-                 first
-                 :moves
-                 util/whose-turn?
-                 (= color))
-          (let [[new-exhausted movesets]
-                (select-options
-                 opts)]
-            (recur
-             (into exhausted new-exhausted)
-             movesets))
-          (let [[new-exhausted movesets]
-                (expand-movesets opts)]
-            (recur
-             (into exhausted new-exhausted)
-             movesets)))))))
+        ;; TODO: include win% and engine eval in "exhausted" as well
+        ;; (do a max on 1 and score for moves on eval calc)
+        ;; TODO: do depth first traversal to fill out the lines in the natural
+        ;; order, then sorting here is unnecessary
+        exhausted
+        (let [[new-exhausted movesets]
+              (move-selector opts)]
+          (recur
+           (into exhausted new-exhausted)
+           movesets))))))
 
 (def overrides
   {["e4" "e5"]                       "Nf3"
