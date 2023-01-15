@@ -3,6 +3,7 @@
    [python-base]
    [libpython-clj2.python :refer [py. py.-]]
    [libpython-clj2.require :refer [require-python]]
+   [flatland.ordered.map  :refer [ordered-map]]
    [camel-snake-kebab.core :as csk]
    [clojure.data.json :as json]))
 
@@ -12,6 +13,12 @@
 
 (defn from-json [raw]
   (json/read-str raw :key-fn (comp csk/->kebab-case keyword)))
+
+(defn oassoc-in
+  [m [k & ks] v]
+  (if ks
+    (assoc (or m (ordered-map)) k (oassoc-in (or (get m k) (ordered-map)) ks v))
+    (assoc (or m (ordered-map)) k v)))
 
 (defn whose-turn? [moves]
   (if (= 0 (mod (count moves) 2))
@@ -39,6 +46,10 @@
      board
      sans)
     (py. board "fen")))
+
+(defn add-tree-branch
+  [tree moves]
+  (oassoc-in tree (interpose :responses moves) {:responses nil}))
 
 (comment
   (sans->fen ["e4" "e5" "Nf3"])

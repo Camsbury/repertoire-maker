@@ -72,7 +72,7 @@
          :moves
          process-options)
      (catch [:status 429] _
-       (log/info "Hit the book rate limit. Waiting one minute before resuming requests.")
+       (log/info "Hit the move history rate limit. Waiting one minute before resuming requests.")
        (Thread/sleep 60000)
        (moves->options opts moves))
      (catch Object _
@@ -80,7 +80,7 @@
        (throw+)))))
 
 (defn- expand-moves
-  [{:keys [moves parent-pct filter-pct local?]}]
+  [{:keys [filter-pct local? moves parent-pct]}]
   (->> moves
        (moves->options {:group :lichess :local? local?})
        (filter #(< filter-pct (* parent-pct (:play-pct %))))
@@ -88,8 +88,13 @@
                         :pct   (* parent-pct (:play-pct move))}))))
 
 (defn- expand-movesets
-  [{:keys [movesets filter-pct local?]
-    :or   {filter-pct (get-in defaults [:algo :filter-pct])}}]
+  [{:keys [exhausted
+           filter-pct
+           local?
+           movesets
+           tree]
+    :or   {filter-pct (get-in defaults [:algo :filter-pct])}
+    :as   opts}]
   (reduce
    (fn [acc {:keys [moves pct]}]
      (if-let [moveset (seq (expand-moves
@@ -97,14 +102,18 @@
                              :parent-pct pct
                              :filter-pct filter-pct
                              :local?     local?}))]
-       (update acc 1 into moveset)
-       (update acc 0 conj moves)))
-   [[] []]
+       (update acc :movesets into moveset)
+       (update acc :exhausted conj moves)))
+   (merge
+    opts
+    {:exhausted exhausted
+     :movesets []})
    movesets))
 
 (defn- select-options
   [{:keys [allowable-loss
            color
+           exhausted
            local?
            movesets
            player
@@ -145,9 +154,16 @@
                                   :since  since
                                   :local? local?}
                                  moves))))]
-       (update acc 1 conj (assoc moveset :moves new-moves))
-       (update acc 0 conj moves)))
-   [[] []]
+       ;; want to update this to take all the move data into the tree...
+       ;; but currently new-moves are only the ucis!
+       ;; this is likely the same in expand movesets
+       (-> acc
+           (update :movesets conj (assoc moveset :moves new-moves)))
+       (-> acc
+           (update :exhausted conj moves))))
+   (merge opts
+          {:exhausted exhausted
+           :movesets []})
    movesets))
 
 (defn- overrides->uci
@@ -181,28 +197,28 @@
 
 (defn build-repertoire
   [{:keys [color moves] :as opts}]
-  (loop [exhausted []
-         movesets  [{:moves moves
-                     :pct   (calc-prob opts)}]]
-    (let [opts (assoc opts :movesets movesets)
-          move-selector (if (->> movesets
-                                 first
-                                 :moves
-                                 util/whose-turn?
-                                 (= color))
-                          select-options
-                          expand-movesets)]
-      (if (empty? movesets)
+  (loop [opts
+         (merge opts
+                {:tree (util/add-tree-branch nil moves)
+                 :exhausted []
+                 :movesets  [{:moves moves
+                              :pct   (calc-prob opts)}]})]
+    (let [move-selector
+          (if (->> opts
+                   :movesets
+                   first
+                   :moves
+                   util/whose-turn?
+                   (= color))
+            select-options
+            expand-movesets)]
+      (if (empty? (:movesets opts))
         ;; TODO: include win% and engine eval in "exhausted" as well
         ;; (do a max on 1 and score for moves on eval calc)
         ;; TODO: do depth first traversal to fill out the lines in the natural
         ;; order, then sorting here is unnecessary
-        exhausted
-        (let [[new-exhausted movesets]
-              (move-selector opts)]
-          (recur
-           (into exhausted new-exhausted)
-           movesets))))))
+        (:exhausted opts)
+        (recur (move-selector opts))))))
 
 (def overrides
   {["e4" "e5"]                       "Nf3"
