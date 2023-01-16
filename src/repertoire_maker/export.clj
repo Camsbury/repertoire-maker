@@ -1,6 +1,7 @@
 (ns repertoire-maker.export
   (:require
    [python-base]
+   [taoensso.timbre :as log]
    [repertoire-maker.util :as util]
    [flatland.ordered.map  :as ordered]
    [libpython-clj2.python :refer [py.]]
@@ -54,27 +55,29 @@
 
 (defn- do-weighted-stat
   [move-tree stat]
-  (reduce
-   (fn [acc [_ {:keys [pct responses] :as parent}]]
-     (let [parent-stat (get parent stat)
-           stat-piece
-           (cond
-             (nil? parent-stat)
-             (do-weighted-stat responses stat)
+  (if (->> move-tree first second :pct some?)
+    (reduce
+     (fn [acc [_ {:keys [pct responses] :as parent}]]
+       (let [parent-stat (get parent stat)
+             stat-piece
+             (cond
+               (nil? parent-stat)
+               (do-weighted-stat responses stat)
 
-             (seq responses)
-             (let [parent-component
-                   (- parent-stat
-                      (->> responses
-                           (map #(* (get % :play-pct 0) (get-in % [1 stat] 0)))
-                           (reduce +)))]
-               (+ parent-component (do-weighted-stat responses stat)))
+               (seq responses)
+               (let [parent-component
+                     (- parent-stat
+                        (->> responses
+                             (map #(* (get % :play-pct 0) (get-in % [1 stat] 0)))
+                             (reduce +)))]
+                 (+ parent-component (do-weighted-stat responses stat)))
 
-             :else
-             parent-stat)]
-       (+ acc (* pct stat-piece))))
-   0.0
-   move-tree))
+               :else
+               parent-stat)]
+         (+ acc (* pct stat-piece))))
+     0.0
+     move-tree)
+    (do-weighted-stat (->> move-tree first second :responses) stat)))
 
 (defn weighted-stat
   [move-tree stat]
@@ -95,9 +98,8 @@
 
                 :else
                 (do
-                  (println child)
-                  (throw (Exception. "This stat doesn't exist for any main node"))))))
-          )]
+                  (log/error child)
+                  (throw (Exception. "This stat doesn't exist for any main node")))))))]
     (/
      (do-weighted-stat move-tree stat)
      parent-pct)))
