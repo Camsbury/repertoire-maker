@@ -14,7 +14,7 @@
   [depth move-tree]
   (->> move-tree
        (mapcat
-        (fn [[_ v]]
+        (fn [[_ {v :responses}]]
           (if (seq v)
             (calc-depths (inc depth) v)
             [depth])))))
@@ -23,7 +23,7 @@
   [move-tree]
   (->> move-tree
        (map
-        (fn [[_ v]]
+        (fn [[_ {v :responses}]]
           (if (seq v)
             (tree-width v)
             1)))

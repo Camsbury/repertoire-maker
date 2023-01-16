@@ -119,7 +119,7 @@
     :as   opts}]
   (reduce
    (fn [acc {:keys [moves] :as moveset}]
-     (if-let [new-moves
+     (let [new-move
               (-> opts
                   (merge
                    {:moves           moves
@@ -147,15 +147,12 @@
                                      :since  since
                                      :local? local?}
                                     moves)))
-                  strategy/choose-move
-                  :moves)]
-       ;; want to update this to take all the move data into the tree...
-       ;; but currently new-moves are only the ucis!
-       ;; this is likely the same in expand movesets
-       (-> acc
-           (update :tree util/add-tree-branch new-moves)
-           (update :movesets conj (assoc moveset :moves new-moves)))
-       acc))
+                  strategy/choose-move)]
+       (if (:uci new-move)
+         (-> acc
+             (update :tree util/add-tree-branch new-move)
+             (update :movesets conj (assoc moveset :moves (:moves new-move))))
+         acc)))
    (assoc opts :movesets [])
    movesets))
 
@@ -248,10 +245,9 @@
   (let [config
         {:allowable-loss  0.9
          :color           :white
-         :filter-pct      0.05
+         :filter-pct      0.1
          :move-choice-pct 0.01
          :moves           ["e4"]
-         #_#_
          :use-engine?     true
          :local?          true
          #_#_

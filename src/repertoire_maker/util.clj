@@ -42,17 +42,17 @@
     (py. board "fen")))
 
 (defn add-tree-branch
-  [tree moves]
+  [tree {:keys [moves] :as move}]
   (let [tree (or tree (ordered-map))]
     (cond
       (= 1 (count moves))
-      (assoc tree (first moves) nil)
+      (assoc tree (first moves) move)
 
       (seq moves)
       (update-in
        tree
        [(first moves) :responses]
-       #(add-tree-branch % (rest moves)))
+       #(add-tree-branch % (update move :moves rest)))
 
       :else
       tree)))
