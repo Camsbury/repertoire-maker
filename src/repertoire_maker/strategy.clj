@@ -63,6 +63,7 @@
                (sort-by (get {:black :white :white :black} color))
                first))]
     (-> (or chosen-move (first engine))
+        (assoc :chosen? true)
         (assoc :pct pct)
         (assoc :moves (conj moves (:uci chosen-move)))
         (assoc :score (->> engine

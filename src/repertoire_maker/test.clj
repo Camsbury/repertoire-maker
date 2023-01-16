@@ -1,5 +1,7 @@
 (ns repertoire-maker.test)
 
 (defn close-to
-  [a b]
-  (< (Math/abs (- a b)) 1e-5))
+  ([a b]
+   (close-to a b 1e-7))
+  ([a b epsilon]
+   (< (Math/abs (- a b)) epsilon)))

@@ -76,7 +76,7 @@
        (Thread/sleep 60000)
        (moves->options opts moves))
      (catch Object _
-       (println (:throwable &throw-context) "error for moves: " moves)
+       (log/error (:throwable &throw-context) "error for moves: " moves)
        (throw+)))))
 
 (defn- expand-moves
@@ -181,13 +181,16 @@
                              :local? local?})
                            (filter #(= move (:uci %)))
                            first)]
-        (if (= color (util/whose-turn? stack))
-          (-> move-eval
-              (assoc :pct pct)
-              (assoc :stack (conj stack move)))
-          (-> move-eval
-              (assoc :pct (* pct (:play-pct move-eval)))
-              (assoc :stack (conj stack move))))))
+        (-> move-eval
+            (assoc :stack (conj stack move))
+            (assoc :chosen?
+                   (if (= color (util/whose-turn? stack))
+                     true
+                     false))
+            (assoc :pct
+                   (if (= color (util/whose-turn? stack))
+                     pct
+                     (* pct (:play-pct move-eval)))))))
     {:pct 1.0 :stack []}
     moves)
    :moves
@@ -212,12 +215,6 @@
           (if (empty? (:movesets opts))
             (:tree opts)
             (recur (move-selector opts)))))))
-
-(comment
-  (initialize-moveset
-   {:moves ["e2e4"]
-    :color :white
-    :local? true}))
 
 (def overrides
   {["e4" "e5"]                       "Nf3"
@@ -254,10 +251,10 @@
 
   (let [config
         {:allowable-loss  0.1
-         :color           :white
+         :color           :black
          :filter-pct      0.1
          :move-choice-pct 0.01
-         :moves           ["e4"]
+         :moves           ["e4" "e5"]
          ;; :use-engine?     true
          :local?          true
          #_#_
