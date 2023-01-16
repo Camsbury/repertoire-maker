@@ -51,15 +51,8 @@
               (color-score color)
               parse-score)})
 
-(defn extract-filtered-moves
-  [allowable-loss options]
-  (let [best-score (->> options first :score)]
-    (->> options
-         (filter #(> allowable-loss (/ (:score %) best-score)))
-         (mapv :uci))))
-
 (defn moves->engine-options
-  [{:keys [moves move-count depth allowable-loss hash threads]}]
+  [{:keys [moves move-count depth hash threads]}]
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
         _      (py. engine "configure" (py/->py-dict {"Hash"    hash
                                                       "Threads" threads}))
@@ -74,8 +67,7 @@
                     (ngn/Limit :depth depth)
                     :multipv move-count)
         moves  (->> info
-                   (map #(uci-and-score :white %))
-                   (extract-filtered-moves allowable-loss))]
+                    (map #(uci-and-score :white %)))]
     (py. engine "quit")
     moves))
 

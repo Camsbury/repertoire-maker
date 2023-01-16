@@ -136,10 +136,8 @@
                                        (ngn/moves->engine-options
                                         (-> defaults
                                             :engine
-                                            (assoc :moves
-                                                   moves)
-                                            (assoc :allowable-loss
-                                                   allowable-loss))))})
+                                            (assoc :moves moves)
+                                            (assoc :allowable-loss allowable-loss))))})
                   (cond->
                       (some? player)
                     (assoc :player (moves->options

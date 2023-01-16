@@ -14,12 +14,6 @@
 (defn from-json [raw]
   (json/read-str raw :key-fn (comp csk/->kebab-case keyword)))
 
-(defn oassoc-in
-  [m [k & ks] v]
-  (if ks
-    (assoc (or m (ordered-map)) k (oassoc-in (or (get m k) (ordered-map)) ks v))
-    (assoc (or m (ordered-map)) k v)))
-
 (defn whose-turn? [moves]
   (if (= 0 (mod (count moves) 2))
     :white
@@ -49,7 +43,19 @@
 
 (defn add-tree-branch
   [tree moves]
-  (oassoc-in tree (interpose :responses moves) nil))
+  (let [tree (or tree (ordered-map))]
+    (cond
+      (= 1 (count moves))
+      (assoc tree (first moves) nil)
+
+      (seq moves)
+      (update-in
+       tree
+       [(first moves) :responses]
+       #(add-tree-branch % (rest moves)))
+
+      :else
+      tree)))
 
 (defn get-in-tree
   [tree moves]
@@ -59,5 +65,4 @@
                    (conj :responses))))
 
 (comment
-  (sans->fen ["e4" "e5" "Nf3"])
   )

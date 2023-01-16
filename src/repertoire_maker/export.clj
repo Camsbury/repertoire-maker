@@ -39,7 +39,7 @@
 (defn export-repertoire
   [move-tree]
   (let [game (pgn/Game)]
-    (println move-tree)
+    ;; (println move-tree)
     (println "average depth: " (average-depth move-tree))
     (println "tree width: " (tree-width move-tree))
     ;;  traversal writing the game tree
