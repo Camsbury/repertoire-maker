@@ -30,6 +30,7 @@
            move-choice-pct
            moves
            overrides
+           pct
            player]
     :or   {min-plays       (get-in defaults [:algo :min-plays])
            move-choice-pct (get-in defaults [:algo :move-choice-pct])}}]
@@ -61,7 +62,8 @@
                (filter-engine allowable-loss engine)
                (sort-by (get {:black :white :white :black} color))
                first))]
-    (-> chosen-move
+    (-> (or chosen-move (first engine))
+        (assoc :pct pct)
         (assoc :moves (conj moves (:uci chosen-move)))
         (assoc :score (->> engine
                            (filter

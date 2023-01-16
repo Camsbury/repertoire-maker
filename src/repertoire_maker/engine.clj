@@ -3,6 +3,7 @@
    [python-base]
    [environ.core :refer [env]]
    [clojure.string :as str]
+   [repertoire-maker.default :refer [defaults]]
    [libpython-clj2.python :refer [py.] :as py]
    [libpython-clj2.require :refer [require-python]]))
 
@@ -15,7 +16,8 @@
 (defn sigmoid
   "normalizes a number a range between 0 and 1"
   [x]
-  (/ 1 (+ 1 (Math/exp (* -1 x)))))
+  (let [K (get-in defaults [:algo :sigmoid-scale])]
+    (/ 1 (+ 1 (Math/exp (* K x))))))
 
 (defn color-score
   [score color]
@@ -67,7 +69,8 @@
                     (ngn/Limit :depth depth)
                     :multipv move-count)
         moves  (->> info
-                    (map #(uci-and-score :white %)))]
+                    (map #(uci-and-score :white %))
+                    (sort-by :score >))]
     (py. engine "quit")
     moves))
 

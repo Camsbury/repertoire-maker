@@ -2,7 +2,8 @@
 
 (def defaults
   {:algo
-   {:filter-pct      0.01
+   {:sigmoid-scale   -0.00575295
+    :filter-pct      0.01
     :min-plays       100
     :move-choice-pct 0.01}
    :engine

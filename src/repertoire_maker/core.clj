@@ -90,8 +90,7 @@
 (defn- expand-movesets
   [{:keys [filter-pct
            local?
-           movesets
-           tree]
+           movesets]
     :or   {filter-pct (get-in defaults [:algo :filter-pct])}
     :as   opts}]
   (reduce
@@ -122,8 +121,8 @@
      (let [new-move
               (-> opts
                   (merge
-                   {:moves           moves
-                    #_#_
+                   moveset
+                   {#_#_
                     :masters         (moves->options
                                       {:group :masters
                                        :local? local?}
@@ -189,7 +188,12 @@
   [{:keys [color moves] :as opts}]
   (loop [opts
          (merge opts
-                {:tree (util/add-tree-branch nil moves)
+                {:tree
+                 (util/add-tree-branch
+                  nil
+                  {:moves moves
+                   :uci (last moves)
+                   :pct (calc-prob opts)})
                  :movesets  [{:moves moves
                               :pct   (calc-prob opts)}]})]
     (let [move-selector
@@ -233,6 +237,20 @@
        {:query-params
         {:moves       30
          :topGames    0
+         :play        "e2e4,c7c5,b1c3"
+         :recentGames 0
+         :speeds      "bullet,blitz,rapid"
+         :ratings     "2000,2200,2500"}})
+      :body
+      util/from-json
+      :moves
+      process-options)
+
+  (-> "http://localhost:9002/lichess"
+      (http/get
+       {:query-params
+        {:moves       30
+         :topGames    0
          :play        "d2d4,g8f6,c2c4"
          :recentGames 0
          :speeds      "bullet,blitz,rapid"
@@ -243,9 +261,9 @@
       process-options)
 
   (let [config
-        {:allowable-loss  0.9
+        {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.1
+         :filter-pct      0.2
          :move-choice-pct 0.01
          :moves           ["e4"]
          :use-engine?     true
@@ -257,7 +275,7 @@
     (build-and-export config))
 
   (let [config
-        {:allowable-loss  0.9
+        {:allowable-loss  0.1
          :color           :white
          :filter-pct      0.001
          :move-choice-pct 0.01

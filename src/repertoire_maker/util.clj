@@ -46,7 +46,7 @@
   (let [tree (or tree (ordered-map))]
     (cond
       (= 1 (count moves))
-      (assoc tree (first moves) move)
+      (assoc tree (first moves) (dissoc move :moves))
 
       (seq moves)
       (update-in

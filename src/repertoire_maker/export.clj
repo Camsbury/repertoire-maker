@@ -36,12 +36,30 @@
     (reduce + (calc-depths 1 move-tree))
     (tree-width move-tree))))
 
+(defn- get-leaves
+  [move-tree]
+  (->> move-tree
+       (mapcat
+        (fn [[_ {:keys [responses] :as move}]]
+          (if (seq responses)
+            (get-leaves responses)
+            [move])))))
+
+(defn- total-play-pct
+  [move-tree]
+  (->> move-tree
+       get-leaves
+       (map :pct)
+       (reduce +)))
+
 (defn export-repertoire
   [move-tree]
   (let [game (pgn/Game)]
-    ;; (println move-tree)
-    (println "average depth: " (average-depth move-tree))
-    (println "tree width: " (tree-width move-tree))
+    (println move-tree)
+    ;; (println "average depth: " (average-depth move-tree))
+    ;; (println "tree width: " (tree-width move-tree))
+    ;; (println "leaves: " (get-leaves move-tree))
+    (println "total play pct: " (total-play-pct move-tree))
     ;;  traversal writing the game tree
     (loop [stack (mapv (fn [move] [[move] [game]]) (keys move-tree))]
       (when (seq stack)
