@@ -57,6 +57,7 @@
 (defn export-repertoire
   [move-tree]
   (let [game (pgn/Game)]
+    #_
     (println move-tree)
     #_
     (println "average depth: " (average-depth move-tree))

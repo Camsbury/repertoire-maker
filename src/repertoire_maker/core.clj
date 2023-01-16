@@ -263,12 +263,14 @@
       :moves
       process-options)
 
+  ;; TODO: debug getting zero stats here
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.1
+         :filter-pct      0.01
          :move-choice-pct 0.01
-         :moves           ["e4" "e5"]
+         :moves           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
+         #_#_
          :use-engine?     true
          :local?          true
          #_#_
@@ -280,7 +282,7 @@
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.001
+         :filter-pct      0.01
          :move-choice-pct 0.01
          :local?          true}]
     (doall
@@ -289,5 +291,4 @@
            ["e4" "e5" "Nf3" "Nc6" "Bc4"]
            ["e4" "e5" "Nf3" "Nc6" "d4"]
            ["e4" "e5" "Nf3" "Nc6" "Nc3"]])))
-
   )
