@@ -170,48 +170,54 @@
             [base tip])))
        (into {})))
 
-(defn- calc-prob
+(defn- initialize-moveset
   [{:keys [moves color local?]}]
-  (:pct
+  (assoc
    (reduce
-    (fn [{:keys [pct stack]} move]
-      (if (= color (util/whose-turn? stack))
-        {:pct pct :stack (conj stack move)}
-        (let [move-eval (->> stack
-                             (moves->options
-                              {:group :lichess
-                               :local? local?})
-                             (filter #(= move (:uci %)))
-                             first)]
-          {:pct (* pct (:play-pct move-eval))
-           :stack (conj stack move)})))
+    (fn [{:keys [pct stack] :as acc} move]
+      (let [move-eval (->> stack
+                           (moves->options
+                            {:group :lichess
+                             :local? local?})
+                           (filter #(= move (:uci %)))
+                           first)]
+        (if (= color (util/whose-turn? stack))
+          (-> move-eval
+              (assoc :pct pct)
+              (assoc :stack (conj stack move)))
+          (-> move-eval
+              (assoc :pct (* pct (:play-pct move-eval)))
+              (assoc :stack (conj stack move))))))
     {:pct 1.0 :stack []}
-    moves)))
+    moves)
+   :moves
+   moves))
 
 (defn build-repertoire
   [{:keys [color moves] :as opts}]
-  (loop [opts
-         (merge opts
-                {:tree
-                 (util/add-tree-branch
-                  nil
-                  {:moves moves
-                   :uci (last moves)
-                   :pct (calc-prob opts)})
-                 :movesets  [{:moves moves
-                              :pct   (calc-prob opts)}]})]
-    (let [move-selector
-          (if (->> opts
-                   :movesets
-                   first
-                   :moves
-                   util/whose-turn?
-                   (= color))
-            choose-moves
-            expand-movesets)]
-      (if (empty? (:movesets opts))
-        (:tree opts)
-        (recur (move-selector opts))))))
+  (let [initial-moveset (initialize-moveset opts)]
+    (loop [opts
+           (merge opts
+                  {:tree     (util/add-tree-branch nil initial-moveset)
+                   :movesets [initial-moveset]})]
+      (let [move-selector
+            (if (->> opts
+                     :movesets
+                     first
+                     :moves
+                     util/whose-turn?
+                     (= color))
+              choose-moves
+              expand-movesets)]
+          (if (empty? (:movesets opts))
+            (:tree opts)
+            (recur (move-selector opts)))))))
+
+(comment
+  (initialize-moveset
+   {:moves ["e2e4"]
+    :color :white
+    :local? true}))
 
 (def overrides
   {["e4" "e5"]                       "Nf3"
@@ -249,7 +255,7 @@
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.01
+         :filter-pct      0.1
          :move-choice-pct 0.01
          :moves           ["e4"]
          ;; :use-engine?     true

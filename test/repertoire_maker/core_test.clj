@@ -1,10 +1,8 @@
 (ns repertoire-maker.core-test
-  (:require [repertoire-maker.core :as sut]
-            [clojure.test :as t :refer [deftest is]]))
-
-(defn close-to
-  [a b]
-  (< (Math/abs (- a b)) 1e-5))
+  (:require
+   [repertoire-maker.core :as sut]
+   [repertoire-maker.test :refer [close-to]]
+   [clojure.test :as t :refer [deftest is]]))
 
 (deftest process-option-test
   (let [prior-total   10000
@@ -22,3 +20,12 @@
     (is (close-to black-win-pct (:black processed)))
     (is (close-to total-moves (:play-count processed)))
     (is (close-to (double (/ total-moves prior-total)) (:play-pct processed)))))
+
+;; TODO: Add API fixtures to test this
+;; (deftest initialize-moveset-test
+
+;; (sut/initialize-moveset
+;;  {:moves ["e2e4"]
+;;   :color :white
+;;   :local? true})
+;;   )

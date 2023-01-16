@@ -56,28 +56,31 @@
 (defn- do-weighted-stat
   [move-tree stat]
   (if (->> move-tree first second :pct some?)
-    (reduce
-     (fn [acc [_ {:keys [pct responses] :as parent}]]
-       (let [parent-stat (get parent stat)
-             stat-piece
-             (cond
-               (nil? parent-stat)
-               (do-weighted-stat responses stat)
+    (loop [trees (map second move-tree) total 0.0]
+      (if (seq trees)
+        (let [{:keys [pct responses] :as parent} (first trees)
+              parent-stat (get parent stat)]
 
-               (seq responses)
-               (let [parent-component
-                     (- parent-stat
-                        (->> responses
-                             (map #(* (get % :play-pct 0) (get-in % [1 stat] 0)))
-                             (reduce +)))]
-                 (+ parent-component (do-weighted-stat responses stat)))
+          (cond
+            (nil? parent-stat)
+            (recur
+             (into (map second responses) (rest trees))
+             total)
 
-               :else
-               parent-stat)]
-         (+ acc (* pct stat-piece))))
-     0.0
-     move-tree)
-    (do-weighted-stat (->> move-tree first second :responses) stat)))
+            (seq responses)
+            (let [parent-component
+                  (- parent-stat
+                     (->> responses
+                          (map #(* (get % :play-pct 0) (get-in % [1 stat] 0)))
+                          (reduce +)))]
+              (recur
+               (into (map second responses) (rest trees))
+               (+ total (* pct parent-component))))
+
+            :else
+            (+ total (* pct parent-stat))))
+        0.0))
+    (recur (->> move-tree first second :responses) stat)))
 
 (defn weighted-stat
   [move-tree stat]
@@ -99,7 +102,7 @@
                 :else
                 (do
                   (log/error child)
-                  (throw (Exception. "This stat doesn't exist for any main node")))))))]
+                  (throw (Exception. "pct doesn't exist for any main node")))))))]
     (/
      (do-weighted-stat move-tree stat)
      parent-pct)))
@@ -107,7 +110,6 @@
 (defn export-repertoire
   [move-tree]
   (let [game (pgn/Game)]
-    #_
     (println move-tree)
     #_
     (println "average depth: " (average-depth move-tree))
