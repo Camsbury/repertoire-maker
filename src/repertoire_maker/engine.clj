@@ -54,7 +54,7 @@
               parse-score)})
 
 (defn moves->engine-options
-  [{:keys [moves move-count depth hash threads]}]
+  [{:keys [color moves move-count depth hash threads]}]
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
         _      (py. engine "configure" (py/->py-dict {"Hash"    hash
                                                       "Threads" threads}))
@@ -69,7 +69,7 @@
                     (ngn/Limit :depth depth)
                     :multipv move-count)
         moves  (->> info
-                    (map #(uci-and-score :white %))
+                    (map #(uci-and-score color %))
                     (sort-by :score >))]
     (py. engine "quit")
     moves))

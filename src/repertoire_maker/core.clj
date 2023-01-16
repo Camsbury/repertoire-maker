@@ -139,6 +139,7 @@
                                        (ngn/moves->engine-options
                                         (-> defaults
                                             :engine
+                                            (assoc :color color)
                                             (assoc :moves moves)
                                             (assoc :allowable-loss allowable-loss))))})
                   (cond->
@@ -171,7 +172,7 @@
        (into {})))
 
 (defn- initialize-moveset
-  [{:keys [moves color local?]}]
+  [{:keys [moves color local? use-engine? allowable-loss] :as opts}]
   (assoc
    (reduce
     (fn [{:keys [pct stack] :as acc} move]
@@ -180,9 +181,22 @@
                             {:group :lichess
                              :local? local?})
                            (filter #(= move (:uci %)))
-                           first)]
+                           first)
+            engine-opts (-> defaults
+                            :engine
+                            (assoc :moves stack)
+                            (assoc :color color)
+                            (assoc :allowable-loss allowable-loss))
+            score
+            (when use-engine?
+              (->> engine-opts
+                   ngn/moves->engine-options
+                   (filter #(= move (:uci %)))
+                   first
+                   :score))]
         (-> move-eval
             (assoc :stack (conj stack move))
+            (assoc :score score)
             (assoc :chosen?
                    (if (= color (util/whose-turn? stack))
                      true
@@ -251,11 +265,11 @@
 
   (let [config
         {:allowable-loss  0.1
-         :color           :black
+         :color           :white
          :filter-pct      0.1
          :move-choice-pct 0.01
          :moves           ["e4" "e5"]
-         ;; :use-engine?     true
+         :use-engine?     true
          :local?          true
          #_#_
          :overrides       overrides

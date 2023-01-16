@@ -1,10 +1,9 @@
-(ns repertoire-maker.export-test
+(ns repertoire-maker.stat-test
   (:require
    [flatland.ordered.map  :refer [ordered-map]]
-   [repertoire-maker.export :as sut]
+   [repertoire-maker.stat :as sut]
    [repertoire-maker.test :refer [close-to]]
    [clojure.test :as t :refer [is deftest]]))
-
 
 (deftest weighted-stat-test
   (let [move-tree-1
@@ -163,15 +162,96 @@
               :stack [e2e4 e7e5],
               :chosen? true,
               :play-count 2545563,
-              :black 0.449697}])}])]
+              :black 0.449697}])}])
+        move-tree-score
+        #ordered/map
+        (["e2e4"
+          {:responses
+           #ordered/map
+           (["e7e5"
+             {:uci "e7e5",
+              :white 0.4968272,
+              :play-pct 0.18443754,
+              :pct 0.18443754315376282,
+              :score 0.5700106367829293,
+              :responses
+              #ordered/map
+              (["b1c3"
+                {:uci "b1c3",
+                 :white 0.5392422,
+                 :play-pct 0.09002308,
+                 :pct 0.18443754315376282,
+                 :score 0.5057526961439385,
+                 :chosen? true,
+                 :play-count 229090,
+                 :black 0.41213498}]),
+              :stack ["e2e4" "e7e5"],
+              :chosen? false,
+              :play-count 2548844,
+              :black 0.44970387}])}])
+        move-tree-score-black
+        #ordered/map
+        (["e2e4"
+          {:responses
+           #ordered/map
+           (["e7e5"
+             {:uci "e7e5",
+              :white 0.4968272,
+              :play-pct 0.18443754,
+              :pct 0.46298056840896606,
+              :score 0.4441428603339783,
+              :responses
+              #ordered/map
+              (["g1f3"
+                {:uci "g1f3",
+                 :white 0.49582887,
+                 :black 0.44762355,
+                 :play-count 1698941,
+                 :play-pct 0.6676149,
+                 :pct 0.30909271533543503,
+                 :responses
+                 #ordered/map
+                 (["d7d5"
+                   {:uci "d7d5",
+                    :white 0.46155828,
+                    :play-pct 0.034275558,
+                    :pct 0.30909271533543503,
+                    :score 0.3175308490476826,
+                    :responses
+                    #ordered/map
+                    (["e4d5"
+                      {:uci "e4d5",
+                       :white 0.46907058,
+                       :black 0.4835094,
+                       :play-count 26318,
+                       :play-pct 0.4502498,
+                       :pct 0.13916893052432092,
+                       :responses
+                       #ordered/map
+                       (["e5e4"
+                         {:uci "e5e4",
+                          :white 0.46145546,
+                          :play-pct 0.80596733,
+                          :pct 0.13916893052432092,
+                          :score 0.3225384269344715,
+                          :chosen? true,
+                          :play-count 21313,
+                          :black 0.48984188}])}]),
+                    :chosen? true,
+                    :play-count 58257,
+                    :black 0.48928025}])}]),
+              :stack ["e2e4" "e7e5"],
+              :chosen? true,
+              :play-count 2548844,
+              :black 0.44970387}])}])]
     (is (close-to
          (+
-          ; c5, Nc3
+                                        ; c5, Nc3
           (+ (* 0.113 0.5269)
              (* 0.289
                 ;; parent component
                 (- 0.5065 (* 0.39 0.5073))))
-          ; e5
+                                        ; e5
           (* 0.1846 0.5396)
 
           ; e6
@@ -220,6 +300,7 @@
              (* 0.1036 0.4735)))
          (sut/weighted-stat move-tree-1 :black)
          1e-3))
+
     (is (close-to
          (/
           (+
@@ -251,7 +332,25 @@
                  (* 0.6675728 0.4958433))))
           0.4630254805088043)
          (sut/weighted-stat move-tree-2 :white)
-         1e-4))))
+         1e-4))
 
+    (is (close-to
+         0.5057526961439385
+         (sut/weighted-stat move-tree-score :score)
+         1e-4))
 
-
+    (is (close-to
+         (/
+          (+
+           ; Nf3, d5
+           (+ (* 0.13919642074334118 0.3225384269344715)
+              (* 0.3091032148021373
+                 ; parent component
+                 (* 0.3175308490476826 (- 1 0.4502498))))
+            ; overall remainder
+           (* 0.46298056840896606
+              (* 0.4441428603339783 (- 1 0.6676149))))
+          0.46298056840896606)
+         (sut/weighted-stat move-tree-score-black :score)
+         1e-4))
+    ))
