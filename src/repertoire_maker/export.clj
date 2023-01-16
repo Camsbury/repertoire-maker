@@ -52,14 +52,72 @@
        (map :pct)
        (reduce +)))
 
+(defn- do-weighted-stat
+  [move-tree stat]
+  (reduce
+   (fn [acc [_ {:keys [pct responses] :as parent}]]
+     (let [parent-stat (get parent stat)
+           stat-piece
+           (cond
+             (nil? parent-stat)
+             (do-weighted-stat responses stat)
+
+             (seq responses)
+             (let [parent-component
+                   (- parent-stat
+                      (->> responses
+                           (map #(* (get % :play-pct 0) (get-in % [1 stat] 0)))
+                           (reduce +)))]
+               (+ parent-component (do-weighted-stat responses stat)))
+
+             :else
+             parent-stat)]
+       (+ acc (* pct stat-piece))))
+   0.0
+   move-tree))
+
+(defn weighted-stat
+  [move-tree stat]
+  (let [parent-pct
+        (if (->> move-tree first second :pct some?)
+          (->> move-tree
+               (map #(get-in % [1 :pct] 0.0))
+               (reduce +))
+          (loop [child (->> move-tree first second :responses first second)]
+            (let [pct (:pct child)
+                  responses (:responses child)]
+              (cond
+                (some? pct)
+                pct
+
+                (seq responses)
+                (recur (->> responses first second))
+
+                :else
+                (do
+                  (println child)
+                  (throw (Exception. "This stat doesn't exist for any main node"))))))
+          )]
+    (/
+     (do-weighted-stat move-tree stat)
+     parent-pct)))
+
 (defn export-repertoire
   [move-tree]
   (let [game (pgn/Game)]
+    #_
     (println move-tree)
-    ;; (println "average depth: " (average-depth move-tree))
-    ;; (println "tree width: " (tree-width move-tree))
-    ;; (println "leaves: " (get-leaves move-tree))
+    #_
+    (println "average depth: " (average-depth move-tree))
+    #_
+    (println "tree width: " (tree-width move-tree))
+    #_
+    (println "leaves: " (get-leaves move-tree))
+    #_
     (println "total play pct: " (total-play-pct move-tree))
+    (println "total win%: " (weighted-stat move-tree :white))
+    (println "total loss%: " (weighted-stat move-tree :black))
+    (println "total score: " (weighted-stat move-tree :score))
     ;;  traversal writing the game tree
     (loop [stack (mapv (fn [move] [[move] [game]]) (keys move-tree))]
       (when (seq stack)

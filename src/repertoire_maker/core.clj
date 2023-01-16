@@ -84,8 +84,10 @@
   (->> moves
        (moves->options {:group :lichess :local? local?})
        (filter #(< filter-pct (* parent-pct (:play-pct %))))
-       (map (fn [move] {:moves (conj moves (:uci move))
-                        :pct   (* parent-pct (:play-pct move))}))))
+       (map (fn [move]
+              (merge move
+                     {:moves (conj moves (:uci move))
+                      :pct   (* parent-pct (:play-pct move))})))))
 
 (defn- expand-movesets
   [{:keys [filter-pct
@@ -94,13 +96,15 @@
     :or   {filter-pct (get-in defaults [:algo :filter-pct])}
     :as   opts}]
   (reduce
-   (fn [acc {:keys [moves pct]}]
+   (fn [acc {:keys [moves pct] :as move}]
      (if-let [moveset (seq (expand-moves
                             {:moves      moves
                              :parent-pct pct
                              :filter-pct filter-pct
                              :local?     local?}))]
-       (update acc :movesets into moveset)
+       (-> acc
+           (update :tree #(reduce util/add-tree-branch % moveset))
+           (update :movesets into moveset))
        acc))
    (assoc opts :movesets [])
    movesets))
@@ -206,10 +210,6 @@
             choose-moves
             expand-movesets)]
       (if (empty? (:movesets opts))
-        ;; TODO: include win% and engine eval in the move tree as well
-        ;; (do a max on 1 and score for moves on eval calc)
-        ;; TODO: do depth first traversal to fill out the lines in the natural
-        ;; order, then sorting here is unnecessary
         (:tree opts)
         (recur (move-selector opts))))))
 
@@ -246,27 +246,13 @@
       :moves
       process-options)
 
-  (-> "http://localhost:9002/lichess"
-      (http/get
-       {:query-params
-        {:moves       30
-         :topGames    0
-         :play        "d2d4,g8f6,c2c4"
-         :recentGames 0
-         :speeds      "bullet,blitz,rapid"
-         :ratings     "2000,2200,2500"}})
-      :body
-      util/from-json
-      :moves
-      process-options)
-
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.2
+         :filter-pct      0.01
          :move-choice-pct 0.01
          :moves           ["e4"]
-         :use-engine?     true
+         ;; :use-engine?     true
          :local?          true
          #_#_
          :overrides       overrides
