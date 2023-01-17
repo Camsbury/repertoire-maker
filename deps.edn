@@ -1,4 +1,6 @@
-{:paths ["src" "test"]
+{:paths ["src"
+         "test"
+         "resources"]
  :deps  {
          ;; logging
          com.palletops/log-config         {:mvn/version "0.1.4"}

@@ -1,252 +1,26 @@
 (ns repertoire-maker.stat-test
   (:require
-   [flatland.ordered.map  :refer [ordered-map]]
+   [flatland.ordered.map]
    [repertoire-maker.stat :as sut]
-   [repertoire-maker.test :refer [close-to]]
+   [repertoire-maker.test :refer [close-to load-fixtures]]
    [clojure.test :as t :refer [is deftest]]))
 
 (deftest weighted-stat-test
-  (let [move-tree-1
-        #ordered/map
-        (["e2e4"
-          {:uci "e2e4",
-           :chosen? true
-           :white 0.48112983,
-           :black 0.46624005,
-           :play-count 13731626,
-           :play-pct 0.46319923,
-           :pct 1.0,
-           :responses
-           #ordered/map
-           (["c7c5"
-             {:uci "c7c5",
-              :white 0.47199076,
-              :black 0.47401774,
-              :play-count 3971904,
-              :play-pct 0.28970253,
-              :pct 0.28970253467559814,
-              :responses #ordered/map
-              (["b1c3"
-                {:uci "b1c3",
-                 :chosen? true
-                 :white 0.5065461,
-                 :black 0.44328055,
-                 :play-count 571638,
-                 :play-pct 0.14411178,
-                 :pct 0.28970253467559814,
-                 :score nil,
-                 :responses
-                 #ordered/map
-                 (["b8c6"
-                   {:uci "b8c6",
-                    :white 0.50729805,
-                    :black 0.44163746,
-                    :play-count 228280,
-                    :play-pct 0.39018154,
-                    :pct 0.1130365815396317,
-                    :responses
-                    #ordered/map
-                    (["f1b5"
-                      {:uci "f1b5",
-                       :chosen? true
-                       :white 0.52684957,
-                       :black 0.41693756,
-                       :play-count 23073,
-                       :play-pct 0.101094946,
-                       :pct 0.1130365815396317,
-                       :score nil}])}])}])}]
-            ["e7e5"
-             {:uci "e7e5",
-              :white 0.496853,
-              :black 0.44970325,
-              :play-count 2530809,
-              :play-pct 0.18459202,
-              :pct 0.18459202349185944,
-              :responses
-              #ordered/map
-              (["b1c3"
-                {:uci "b1c3",
-                 :chosen? true
-                 :white 0.53959924,
-                 :black 0.41176262,
-                 :play-count 227517,
-                 :play-pct 0.09004198,
-                 :pct 0.18459202349185944,
-                 :score nil}])}]
-            ["e7e6"
-             {:uci "e7e6",
-              :white 0.48720765,
-              :black 0.4590694,
-              :play-count 1926700,
-              :play-pct 0.14052954,
-              :pct 0.1405295431613922,
-              :responses
-              #ordered/map
-              (["d1e2"
-                {:uci "d1e2",
-                 :chosen? true
-                 :white 0.53444946,
-                 :black 0.4139658,
-                 :play-count 27954,
-                 :play-pct 0.014529083,
-                 :pct 0.1405295431613922,
-                 :score nil}])}]
-            ["c7c6"
-             {:uci "c7c6",
-              :white 0.47020537,
-              :black 0.47346783,
-              :play-count 1419786,
-              :play-pct 0.10355628,
-              :pct 0.10355628281831741,
-              :responses
-              #ordered/map
-              (["c2c4"
-                {:uci "c2c4",
-                 :chosen? true
-                 :white 0.49715963,
-                 :black 0.44314045,
-                 :play-count 48057,
-                 :play-pct 0.033890262,
-                 :pct 0.10355628281831741,
-                 :score nil}])}])}])
-        move-tree-2
-        #ordered/map
-        (["e2e4"
-          {:responses
-           #ordered/map
-           (["e7e5"
-             {:uci "e7e5",
-              :white 0.49684057,
-              :play-pct 0.1844795,
-              :pct 0.4630254805088043,
-              :responses
-              #ordered/map
-              (["g1f3"
-                {:uci "g1f3",
-                 :white 0.4958433,
-                 :play-pct 0.6675728,
-                 :play-count 1696657,
-                 :black 0.44761965,
-                 :pct 0.3091032148021373,
-                 :responses
-                 #ordered/map
-                 (["d7d5"
-                   {:uci "d7d5",
-                    :white 0.46160054,
-                    :play-pct 0.03427448,
-                    :pct 0.3091032148021373,
-                    :score nil,
-                    :responses
-                    #ordered/map
-                    (["e4d5"
-                      {:uci "e4d5",
-                       :white 0.46910626,
-                       :play-pct 0.45032343,
-                       :play-count 26316,
-                       :black 0.48350814,
-                       :pct 0.13919642074334118,
-                       :responses
-                       #ordered/map
-                       (["e5e4"
-                         {:uci "e5e4",
-                          :white 0.46149877,
-                          :play-pct 0.80595267,
-                          :pct 0.13919642074334118,
-                          :score nil,
-                          :chosen? true,
-                          :play-count 21311,
-                          :black 0.48984092}])}]),
-                    :chosen? true,
-                    :play-count 58243,
-                    :black 0.4892777}])}]),
-              :stack [e2e4 e7e5],
-              :chosen? true,
-              :play-count 2545563,
-              :black 0.449697}])}])
-        move-tree-score
-        #ordered/map
-        (["e2e4"
-          {:responses
-           #ordered/map
-           (["e7e5"
-             {:uci "e7e5",
-              :white 0.4968272,
-              :play-pct 0.18443754,
-              :pct 0.18443754315376282,
-              :score 0.5700106367829293,
-              :responses
-              #ordered/map
-              (["b1c3"
-                {:uci "b1c3",
-                 :white 0.5392422,
-                 :play-pct 0.09002308,
-                 :pct 0.18443754315376282,
-                 :score 0.5057526961439385,
-                 :chosen? true,
-                 :play-count 229090,
-                 :black 0.41213498}]),
-              :stack ["e2e4" "e7e5"],
-              :chosen? false,
-              :play-count 2548844,
-              :black 0.44970387}])}])
-        move-tree-score-black
-        #ordered/map
-        (["e2e4"
-          {:responses
-           #ordered/map
-           (["e7e5"
-             {:uci "e7e5",
-              :white 0.4968272,
-              :play-pct 0.18443754,
-              :pct 0.46298056840896606,
-              :score 0.4441428603339783,
-              :responses
-              #ordered/map
-              (["g1f3"
-                {:uci "g1f3",
-                 :white 0.49582887,
-                 :black 0.44762355,
-                 :play-count 1698941,
-                 :play-pct 0.6676149,
-                 :pct 0.30909271533543503,
-                 :responses
-                 #ordered/map
-                 (["d7d5"
-                   {:uci "d7d5",
-                    :white 0.46155828,
-                    :play-pct 0.034275558,
-                    :pct 0.30909271533543503,
-                    :score 0.3175308490476826,
-                    :responses
-                    #ordered/map
-                    (["e4d5"
-                      {:uci "e4d5",
-                       :white 0.46907058,
-                       :black 0.4835094,
-                       :play-count 26318,
-                       :play-pct 0.4502498,
-                       :pct 0.13916893052432092,
-                       :responses
-                       #ordered/map
-                       (["e5e4"
-                         {:uci "e5e4",
-                          :white 0.46145546,
-                          :play-pct 0.80596733,
-                          :pct 0.13916893052432092,
-                          :score 0.3225384269344715,
-                          :chosen? true,
-                          :play-count 21313,
-                          :black 0.48984188}])}]),
-                    :chosen? true,
-                    :play-count 58257,
-                    :black 0.48928025}])}]),
-              :stack ["e2e4" "e7e5"],
-              :chosen? true,
-              :play-count 2548844,
-              :black 0.44970387}])}])]
+  (let [{:keys
+         [move-tree-1
+          move-tree-2
+          move-tree-score
+          move-tree-score-black
+          italian-game]}
+        (load-fixtures
+         "move-tree-1"
+         "move-tree-2"
+         "move-tree-score"
+         "move-tree-score-black"
+         "italian-game")]
     (is (close-to
          (+
-                                        ; c5, Nc3
+          ; c5, Nc3
           (+ (* 0.113 0.5269)
              (* 0.289
                 ;; parent component
@@ -334,6 +108,11 @@
          (sut/weighted-stat move-tree-2 :white)
          1e-4))
 
+
+    (is (close-to
+         0.56048740
+         (sut/weighted-stat italian-game :white)))
+
     (is (close-to
          0.5057526961439385
          (sut/weighted-stat move-tree-score :score)
@@ -353,4 +132,5 @@
           0.46298056840896606)
          (sut/weighted-stat move-tree-score-black :score)
          1e-4))
+
     ))

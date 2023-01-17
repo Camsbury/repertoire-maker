@@ -1,0 +1,25 @@
+#ordered/map
+(["e2e4"
+  {:responses
+   #ordered/map
+   (["e7e5"
+     {:uci "e7e5",
+      :white 0.4968272,
+      :play-pct 0.18443754,
+      :pct 0.18443754315376282,
+      :score 0.5700106367829293,
+      :responses
+      #ordered/map
+      (["b1c3"
+        {:uci "b1c3",
+         :white 0.5392422,
+         :play-pct 0.09002308,
+         :pct 0.18443754315376282,
+         :score 0.5057526961439385,
+         :chosen? true,
+         :play-count 229090,
+         :black 0.41213498}]),
+      :stack ["e2e4" "e7e5"],
+      :chosen? false,
+      :play-count 2548844,
+      :black 0.44970387}])}])

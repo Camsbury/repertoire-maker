@@ -1,0 +1,54 @@
+#ordered/map
+(["e2e4"
+  {:responses
+   #ordered/map
+   (["e7e5"
+     {:uci "e7e5",
+      :white 0.4968272,
+      :play-pct 0.18443754,
+      :pct 0.46298056840896606,
+      :score 0.4441428603339783,
+      :responses
+      #ordered/map
+      (["g1f3"
+        {:uci "g1f3",
+         :white 0.49582887,
+         :black 0.44762355,
+         :play-count 1698941,
+         :play-pct 0.6676149,
+         :pct 0.30909271533543503,
+         :responses
+         #ordered/map
+         (["d7d5"
+           {:uci "d7d5",
+            :white 0.46155828,
+            :play-pct 0.034275558,
+            :pct 0.30909271533543503,
+            :score 0.3175308490476826,
+            :responses
+            #ordered/map
+            (["e4d5"
+              {:uci "e4d5",
+               :white 0.46907058,
+               :black 0.4835094,
+               :play-count 26318,
+               :play-pct 0.4502498,
+               :pct 0.13916893052432092,
+               :responses
+               #ordered/map
+               (["e5e4"
+                 {:uci "e5e4",
+                  :white 0.46145546,
+                  :play-pct 0.80596733,
+                  :pct 0.13916893052432092,
+                  :score 0.3225384269344715,
+                  :chosen? true,
+                  :play-count 21313,
+                  :black 0.48984188}])}]),
+            :chosen? true,
+            :play-count 58257,
+            :black 0.48928025}])}]),
+      :stack ["e2e4" "e7e5"],
+      :chosen? true,
+      :play-count 2548844,
+      :black 0.44970387}])}])

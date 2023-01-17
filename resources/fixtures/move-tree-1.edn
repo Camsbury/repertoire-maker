@@ -1,0 +1,103 @@
+#ordered/map
+(["e2e4"
+  #ordered/map
+  {:uci "e2e4",
+   :chosen? true
+   :white 0.48112983,
+   :black 0.46624005,
+   :play-count 13731626,
+   :play-pct 0.46319923,
+   :pct 1.0,
+   :responses
+   #ordered/map
+   (["c7c5"
+     {:uci "c7c5",
+      :white 0.47199076,
+      :black 0.47401774,
+      :play-count 3971904,
+      :play-pct 0.28970253,
+      :pct 0.28970253467559814,
+      :responses #ordered/map
+      (["b1c3"
+        {:uci "b1c3",
+         :chosen? true
+         :white 0.5065461,
+         :black 0.44328055,
+         :play-count 571638,
+         :play-pct 0.14411178,
+         :pct 0.28970253467559814,
+         :score nil,
+         :responses
+         #ordered/map
+         (["b8c6"
+           {:uci "b8c6",
+            :white 0.50729805,
+            :black 0.44163746,
+            :play-count 228280,
+            :play-pct 0.39018154,
+            :pct 0.1130365815396317,
+            :responses
+            #ordered/map
+            (["f1b5"
+              {:uci "f1b5",
+               :chosen? true
+               :white 0.52684957,
+               :black 0.41693756,
+               :play-count 23073,
+               :play-pct 0.101094946,
+               :pct 0.1130365815396317,
+               :score nil}])}])}])}]
+    ["e7e5"
+     {:uci "e7e5",
+      :white 0.496853,
+      :black 0.44970325,
+      :play-count 2530809,
+      :play-pct 0.18459202,
+      :pct 0.18459202349185944,
+      :responses
+      #ordered/map
+      (["b1c3"
+        {:uci "b1c3",
+         :chosen? true
+         :white 0.53959924,
+         :black 0.41176262,
+         :play-count 227517,
+         :play-pct 0.09004198,
+         :pct 0.18459202349185944,
+         :score nil}])}]
+    ["e7e6"
+     {:uci "e7e6",
+      :white 0.48720765,
+      :black 0.4590694,
+      :play-count 1926700,
+      :play-pct 0.14052954,
+      :pct 0.1405295431613922,
+      :responses
+      #ordered/map
+      (["d1e2"
+        {:uci "d1e2",
+         :chosen? true
+         :white 0.53444946,
+         :black 0.4139658,
+         :play-count 27954,
+         :play-pct 0.014529083,
+         :pct 0.1405295431613922,
+         :score nil}])}]
+    ["c7c6"
+     {:uci "c7c6",
+      :white 0.47020537,
+      :black 0.47346783,
+      :play-count 1419786,
+      :play-pct 0.10355628,
+      :pct 0.10355628281831741,
+      :responses
+      #ordered/map
+      (["c2c4"
+        {:uci "c2c4",
+         :chosen? true
+         :white 0.49715963,
+         :black 0.44314045,
+         :play-count 48057,
+         :play-pct 0.033890262,
+         :pct 0.10355628281831741,
+         :score nil}])}])}])
