@@ -134,31 +134,31 @@
   (reduce
    (fn [acc {:keys [moves] :as moveset}]
      (let [new-move
-              (-> opts
-                  (merge
-                   moveset
-                   {#_#_
-                    :masters         (moves->options
-                                      {:group :masters
-                                       :local? local?}
-                                      moves)
-                    :lichess         (moves->options
-                                      {:group :lichess
-                                       :local? local?}
-                                      moves)
-                    :engine          (when use-engine?
-                                       (prepare-engine-options
-                                        (assoc opts :moves moves)))})
-                  (cond->
-                      (some? player)
-                    (assoc :player (moves->options
-                                    {:group  :player
-                                     :color  color
-                                     :player player
-                                     :since  since
-                                     :local? local?}
-                                    moves)))
-                  strategy/choose-move)]
+           (-> opts
+               (merge
+                moveset
+                {#_#_
+                 :masters         (moves->options
+                                   {:group :masters
+                                    :local? local?}
+                                   moves)
+                 :lichess         (moves->options
+                                   {:group :lichess
+                                    :local? local?}
+                                   moves)
+                 :engine          (when use-engine?
+                                    (prepare-engine-options
+                                     (assoc opts :moves moves)))})
+               (cond->
+                   (some? player)
+                 (assoc :player (moves->options
+                                 {:group  :player
+                                  :color  color
+                                  :player player
+                                  :since  since
+                                  :local? local?}
+                                 moves)))
+               strategy/choose-move)]
        (if (:uci new-move)
          (-> acc
              (update :tree util/add-tree-branch new-move)

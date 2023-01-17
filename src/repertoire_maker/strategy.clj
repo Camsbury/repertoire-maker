@@ -33,7 +33,10 @@
            pct
            player]
     :or   {min-plays       (get-in defaults [:algo :min-plays])
-           move-choice-pct (get-in defaults [:algo :move-choice-pct])}}]
+           move-choice-pct (get-in defaults [:algo :move-choice-pct])}
+    :as opts}]
+  (when (= ["e2e4" "e7e5" "g1f3" "b8c6" "f1b5" "g8e7" "b1c3" "g7g6" "h2h4" "h7h6"] moves)
+    (println opts))
   (let [player-move
         (->> player
              (filter-engine allowable-loss engine)
@@ -43,26 +46,28 @@
         overridden-move (get overrides moves)
 
         chosen-move
-        (cond
-          (some? overridden-move)
-          (->> lichess
-               (filter #(= overridden-move (:uci %)))
-               first)
+        (or
+         (cond
+           (some? overridden-move)
+           (->> lichess
+                (filter #(= overridden-move (:uci %)))
+                first)
 
-          (some? player-move)
-          (->> lichess
-               (filter-engine allowable-loss engine)
-               (filter #(= player-move (:uci %)))
-               first)
+           (some? player-move)
+           (->> lichess
+                (filter-engine allowable-loss engine)
+                (filter #(= player-move (:uci %)))
+                first)
 
-          :else
-          (->> lichess
-               (filter #(< min-plays (:play-count %)))
-               (filter #(< move-choice-pct (:play-pct %)))
-               (filter-engine allowable-loss engine)
-               (sort-by (get {:black :white :white :black} color))
-               first))]
-    (some-> (or chosen-move (first engine))
+           :else
+           (->> lichess
+                (filter #(< min-plays (:play-count %)))
+                (filter #(< move-choice-pct (:play-pct %)))
+                (filter-engine allowable-loss engine)
+                (sort-by (get {:black :white :white :black} color))
+                first))
+         (first engine))]
+    (some-> chosen-move
             (assoc :chosen? true)
             (assoc :pct pct)
             (assoc :moves (conj moves (:uci chosen-move)))
@@ -72,3 +77,4 @@
                                     (:uci %)))
                                first
                                :score)))))
+

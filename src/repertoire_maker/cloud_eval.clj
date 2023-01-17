@@ -21,7 +21,11 @@
 (defn- parse-cloud-eval
   [{:keys [depth pvs]}]
   {:depth depth
-   :candidates (mapv uci-and-score pvs)})
+   :candidates
+   (->> pvs
+        (map uci-and-score)
+        (sort-by :score >)
+        (into []))})
 
 (defn fen->cloud-eval
   [fen]
