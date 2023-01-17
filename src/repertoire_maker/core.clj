@@ -291,14 +291,4 @@
           ["e4" "e5" "Nf3" "Nc6" "d4"]
           ["e4" "e5" "Nf3" "Nc6" "Nc3"]]))
 
-  ;; TODO: integrate cloud cache of evals
-  (->
-   (http/get
-    "https://lichess.org/api/cloud-eval"
-    {:query-params
-     {:fen     (util/sans->fen ["e4" "e5" "Nf3" "Nc6" "Bb5"])
-      ;; 5 is what lichess caches deeply
-      :multiPv 5}})
-   :body
-   util/from-json)
   )

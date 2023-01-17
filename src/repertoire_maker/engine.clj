@@ -4,7 +4,6 @@
    [environ.core :refer [env]]
    [clojure.string :as str]
    [repertoire-maker.score :as score]
-   [repertoire-maker.default :refer [defaults]]
    [libpython-clj2.python :refer [py.] :as py]
    [libpython-clj2.require :refer [require-python]]))
 
@@ -23,7 +22,7 @@
 (defn parse-score
   [score]
   (if (str/includes? score "#")
-    {:mate-count
+    {:mate
      (-> score
          (str/replace #"#" "")
          (Integer/parseInt))}
