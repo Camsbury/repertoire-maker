@@ -1,4 +1,7 @@
 {:lint-as
  {libpython-clj2.require/require-python clojure.core/require
   slingshot.slingshot/try+ clojure.core/try
-  slingshot.slingshot/throw+ clojure.core/throw}}
+  slingshot.slingshot/throw+ clojure.core/throw}
+ :linters
+ {:unresolved-symbol
+  {:exclude [(slingshot.slingshot/try+ [&throw-context])]}}}
