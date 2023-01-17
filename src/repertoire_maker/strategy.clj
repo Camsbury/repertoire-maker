@@ -62,13 +62,13 @@
                (filter-engine allowable-loss engine)
                (sort-by (get {:black :white :white :black} color))
                first))]
-    (-> (or chosen-move (first engine))
-        (assoc :chosen? true)
-        (assoc :pct pct)
-        (assoc :moves (conj moves (:uci chosen-move)))
-        (assoc :score (->> engine
-                           (filter
-                            #(= (:uci chosen-move)
-                                (:uci %)))
-                           first
-                           :score)))))
+    (some-> (or chosen-move (first engine))
+            (assoc :chosen? true)
+            (assoc :pct pct)
+            (assoc :moves (conj moves (:uci chosen-move)))
+            (assoc :score (->> engine
+                               (filter
+                                #(= (:uci chosen-move)
+                                    (:uci %)))
+                               first
+                               :score)))))

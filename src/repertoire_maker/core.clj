@@ -189,15 +189,10 @@
                              :local? local?})
                            (filter #(= move (:uci %)))
                            first)
-            engine-opts (-> defaults
-                            :engine
-                            (assoc :moves stack)
-                            (assoc :color color)
-                            (assoc :allowable-loss allowable-loss))
             score
             (when use-engine?
-              (->> engine-opts
-                   ngn/moves->engine-options
+              (->> (assoc opts :moves stack)
+                   prepare-engine-options
                    (filter #(= move (:uci %)))
                    first
                    :score))]
