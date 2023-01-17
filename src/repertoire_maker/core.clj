@@ -6,6 +6,7 @@
    [repertoire-maker.export :as export]
    [repertoire-maker.strategy :as strategy]
    [repertoire-maker.util :as util]
+   [repertoire-maker.cloud-eval :as cloud-eval]
    [slingshot.slingshot :refer [try+ throw+]]
    [clojure.string :as str]
    [clj-http.client :as http]))
@@ -109,6 +110,16 @@
    (assoc opts :movesets [])
    movesets))
 
+(defn- prepare-engine-options
+  [{:keys [moves] :as opts}]
+  (let [opts (-> defaults :engine (merge opts))
+        {:keys [depth candidates]} (cloud-eval/fen->cloud-eval
+                                    (util/ucis->fen moves))]
+    (if (some-> depth
+                (> (:depth opts)))
+      candidates
+      (ngn/moves->engine-options opts))))
+
 (defn- choose-moves
   [{:keys [allowable-loss
            color
@@ -136,12 +147,8 @@
                                        :local? local?}
                                       moves)
                     :engine          (when use-engine?
-                                       (ngn/moves->engine-options
-                                        (-> defaults
-                                            :engine
-                                            (assoc :color color)
-                                            (assoc :moves moves)
-                                            (assoc :allowable-loss allowable-loss))))})
+                                       (prepare-engine-options
+                                        (assoc opts :moves moves)))})
                   (cond->
                       (some? player)
                     (assoc :player (moves->options

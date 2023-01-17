@@ -41,6 +41,16 @@
      sans)
     (py. board "fen")))
 
+(defn ucis->fen
+  "Convert a list of UCI notation moves to a FEN board state"
+  [sans]
+  (let [board (chess/Board)]
+    (reduce
+     (fn [b m] (py. b "push_uci" m) b)
+     board
+     sans)
+    (py. board "fen")))
+
 (defn add-tree-branch
   [tree {:keys [moves] :as move}]
   (let [tree (or tree (ordered-map))]

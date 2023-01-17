@@ -21,7 +21,7 @@
 (defn- parse-cloud-eval
   [{:keys [depth pvs]}]
   {:depth depth
-   :moves (mapv uci-and-score pvs)})
+   :candidates (mapv uci-and-score pvs)})
 
 (defn fen->cloud-eval
   [fen]
@@ -40,6 +40,21 @@
      (log/info "Hit the cloud eval rate limit. Waiting one minute before resuming requests.")
      (Thread/sleep 60000)
      (fen->cloud-eval fen))
+   (catch [:status 404] _
+     (log/info (str "Cloud eval for fen: " fen " is unavailable"))
+     nil)
    (catch Object _
      (log/error (:throwable &throw-context) "error for fen: " fen)
      (throw+))))
+
+
+(comment
+  (->
+   (http/get
+    "https://lichess.org/api/cloud-eval"
+    {:query-params
+     {:fen "rnb1k2r/1pq1bppp/p2ppn2/6B1/3NPP2/2N3P1/PPP4P/R2QKB1R w KQkq - 1 9"
+      ;; 5 is what lichess caches deeply
+      :multiPv 5}})
+   :body
+   util/from-json))
