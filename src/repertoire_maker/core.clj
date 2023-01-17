@@ -263,7 +263,6 @@
       :moves
       process-options)
 
-  ;; TODO: debug getting zero stats here
   (let [config
         {:allowable-loss  0.1
          :color           :white

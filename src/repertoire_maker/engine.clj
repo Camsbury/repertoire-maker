@@ -3,6 +3,7 @@
    [python-base]
    [environ.core :refer [env]]
    [clojure.string :as str]
+   [repertoire-maker.score :as score]
    [repertoire-maker.default :refer [defaults]]
    [libpython-clj2.python :refer [py.] :as py]
    [libpython-clj2.require :refer [require-python]]))
@@ -13,12 +14,6 @@
 
 (def stockfish-path (env :stockfish-path))
 
-(defn sigmoid
-  "normalizes a number a range between 0 and 1"
-  [x]
-  (let [K (get-in defaults [:algo :sigmoid-scale])]
-    (/ 1 (+ 1 (Math/exp (* K x))))))
-
 (defn color-score
   [score color]
   (if (= color :white)
@@ -28,19 +23,14 @@
 (defn parse-score
   [score]
   (if (str/includes? score "#")
-    ;; inverting the mate score prioritizes lower move mates
-    ;; adding 1 ensures that the score is always higher than a centipawn score
-    (+ 1
-       (/ 1
-          (-> score
-              (str/replace #"#" "")
-              (Integer/parseInt))))
-    ;; this is normalized via the sigmoid function to bound it and provide
-    ;; a percent likelihood of winning given the current state
-    (-> score
-        (str/replace #"\+" "")
-        (Integer/parseInt)
-        sigmoid)))
+    {:mate-count
+     (-> score
+         (str/replace #"#" "")
+         (Integer/parseInt))}
+    {:cp
+     (-> score
+         (str/replace #"\+" "")
+         (Integer/parseInt))}))
 
 (defn uci-and-score
   [color option]
@@ -51,7 +41,8 @@
    :score (-> option
               (py/get-item "score")
               (color-score color)
-              parse-score)})
+              parse-score
+              score/standardize-score)})
 
 (defn moves->engine-options
   [{:keys [color moves move-count depth hash threads]}]
@@ -73,8 +64,3 @@
                     (sort-by :score >))]
     (py. engine "quit")
     moves))
-
-(comment
-
-
-  )
