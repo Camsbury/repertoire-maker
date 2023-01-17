@@ -33,10 +33,7 @@
            pct
            player]
     :or   {min-plays       (get-in defaults [:algo :min-plays])
-           move-choice-pct (get-in defaults [:algo :move-choice-pct])}
-    :as opts}]
-  (when (= ["e2e4" "e7e5" "g1f3" "b8c6" "f1b5" "g8e7" "b1c3" "g7g6" "h2h4" "h7h6"] moves)
-    (println opts))
+           move-choice-pct (get-in defaults [:algo :move-choice-pct])}}]
   (let [player-move
         (->> player
              (filter-engine allowable-loss engine)
