@@ -53,7 +53,7 @@
 
             :else
             (+ total (* pct parent-stat))))
-        0.0))
+        total))
     (recur (->> move-tree first second :responses) stat)))
 
 (defn weighted-stat

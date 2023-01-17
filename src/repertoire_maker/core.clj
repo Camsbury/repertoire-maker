@@ -267,9 +267,9 @@
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.01
+         :filter-pct      0.001
          :move-choice-pct 0.01
-         :moves           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
+         :moves           ["e4" "e5" "Nf3" "Nc6" "Bb5"]
          #_#_
          :use-engine?     true
          :local?          true
@@ -282,13 +282,13 @@
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.01
+         :filter-pct      0.001
          :move-choice-pct 0.01
          :local?          true}]
-    (doall
-     (map #(build-and-export (assoc config :moves %))
-          [["e4" "e5" "Nf3" "Nc6" "Bb5"]
-           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
-           ["e4" "e5" "Nf3" "Nc6" "d4"]
-           ["e4" "e5" "Nf3" "Nc6" "Nc3"]])))
+    (map #(build-and-export (assoc config :moves %))
+         [["e4" "e5" "Nf3" "Nc6" "Bb5"]
+          #_#_#_
+          ["e4" "e5" "Nf3" "Nc6" "Bc4"]
+          ["e4" "e5" "Nf3" "Nc6" "d4"]
+          ["e4" "e5" "Nf3" "Nc6" "Nc3"]]))
   )

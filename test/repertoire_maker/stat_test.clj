@@ -11,13 +11,13 @@
           move-tree-2
           move-tree-score
           move-tree-score-black
-          italian-game]}
+          large-spanish-tree]}
         (load-fixtures
          "move-tree-1"
          "move-tree-2"
          "move-tree-score"
          "move-tree-score-black"
-         "italian-game")]
+         "large-spanish-tree")]
     (is (close-to
          (+
           ; c5, Nc3
@@ -108,11 +108,6 @@
          (sut/weighted-stat move-tree-2 :white)
          1e-4))
 
-
-    (is (close-to
-         0.56048740
-         (sut/weighted-stat italian-game :white)))
-
     (is (close-to
          0.5057526961439385
          (sut/weighted-stat move-tree-score :score)
@@ -133,4 +128,6 @@
          (sut/weighted-stat move-tree-score-black :score)
          1e-4))
 
-    ))
+    (is (close-to
+         0.512729463
+         (sut/weighted-stat large-spanish-tree :white)))))
