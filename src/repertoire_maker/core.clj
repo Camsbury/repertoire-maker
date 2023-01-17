@@ -267,10 +267,9 @@
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.001
+         :filter-pct      0.01
          :move-choice-pct 0.01
          :moves           ["e4" "e5" "Nf3" "Nc6" "Bb5"]
-         #_#_
          :use-engine?     true
          :local?          true
          #_#_
@@ -282,13 +281,25 @@
   (let [config
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.001
+         :filter-pct      0.01
          :move-choice-pct 0.01
+         :use-engine?     true
+         #_#_
          :local?          true}]
     (map #(build-and-export (assoc config :moves %))
          [["e4" "e5" "Nf3" "Nc6" "Bb5"]
-          #_#_#_
           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
           ["e4" "e5" "Nf3" "Nc6" "d4"]
           ["e4" "e5" "Nf3" "Nc6" "Nc3"]]))
+
+  ;; TODO: integrate cloud cache of evals
+  (->
+   (http/get
+    "https://lichess.org/api/cloud-eval"
+    {:query-params
+     {:fen     (util/sans->fen ["e4" "e5" "Nf3" "Nc6" "Bb5"])
+      ;; 5 is what lichess caches deeply
+      :multiPv 5}})
+   :body
+   util/from-json)
   )

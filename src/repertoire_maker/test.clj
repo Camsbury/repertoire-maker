@@ -14,9 +14,11 @@
   [& fixture-names]
   (into
    {}
-   (map (fn [fixture-name] [(keyword fixture-name) (edn/read-string
-         {:readers
-          {'ordered/map flatland.ordered.map/ordered-map-reader}}
-         (slurp
-          (io/resource (str "fixtures/" fixture-name ".edn"))))]))
+   (map (fn [fixture-name]
+          [(keyword fixture-name)
+           (edn/read-string
+            {:readers
+             {'ordered/map flatland.ordered.map/ordered-map-reader}}
+            (slurp
+             (io/resource (str "fixtures/" fixture-name ".edn"))))]))
    fixture-names))

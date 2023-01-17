@@ -57,9 +57,8 @@
 (defn export-repertoire
   [move-tree]
   (let [game (pgn/Game)]
-    (clojure.pprint/pprint
-     move-tree
-     (clojure.java.io/writer "/home/monoid/projects/Camsbury/repertoire-maker/resources/fixtures/italian-game.edn"))
+    #_
+    (clojure.pprint/pprint move-tree)
     #_
     (println "average depth: " (average-depth move-tree))
     #_
