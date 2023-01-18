@@ -3,8 +3,11 @@
    [python-base]
    [environ.core :refer [env]]
    [clojure.string :as str]
+   [repertoire-maker.util.notation :as not]
+   [repertoire-maker.cloud-eval :as cloud-eval]
+   [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.score :as score]
-   [libpython-clj2.python :refer [py.] :as py]
+   [libpython-clj2.python :refer [py. py.-] :as py]
    [libpython-clj2.require :refer [require-python]]))
 
 (require-python
@@ -43,7 +46,7 @@
               parse-score
               score/standardize-score)})
 
-(defn moves->engine-options
+(defn moves->engine-candidates
   [{:keys [color moves move-count depth hash threads]}]
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
         _      (py. engine "configure" (py/->py-dict {"Hash"    hash
@@ -63,3 +66,18 @@
                     (sort-by :score >))]
     (py. engine "quit")
     moves))
+
+
+(defn prepare-engine-candidates
+  [{:keys [use-engine? moves] :as opts}]
+  (when use-engine?
+    (let [opts (-> defaults :engine (merge opts))
+
+          {:keys [depth candidates]}
+          (cloud-eval/fen->cloud-eval
+           (not/ucis->fen moves))]
+
+      (if (some-> depth
+                  (> (:depth opts)))
+        candidates
+        (moves->engine-candidates opts)))))

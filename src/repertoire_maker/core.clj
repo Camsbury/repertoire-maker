@@ -1,293 +1,86 @@
 (ns repertoire-maker.core
   (:require
    [taoensso.timbre :as log]
-   [repertoire-maker.default :refer [defaults]]
-   [repertoire-maker.engine :as ngn]
+   [repertoire-maker.build :refer [expand-movesets choose-moves]]
    [repertoire-maker.export :as export]
-   [repertoire-maker.strategy :as strategy]
-   [repertoire-maker.util :as util]
-   [repertoire-maker.cloud-eval :as cloud-eval]
-   [slingshot.slingshot :refer [try+ throw+]]
-   [clojure.string :as str]
-   [clj-http.client :as http]))
+   [repertoire-maker.init :refer [init-opts]]
+   [repertoire-maker.stat :as stat]
+   [repertoire-maker.util.core :as util]))
 
-(def urls
-  {:local "http://localhost:9002/"
-   :public "https://explorer.lichess.ovh/"})
+(defn- my-turn?
+  [{:keys [movesets color]}]
+  (->> movesets
+       first
+       :moves
+       util/whose-turn?
+       (= color)))
 
-(defn- total-option
-  [{:keys [white draws black]}]
-  (+ white draws black))
-
-(defn process-option
-  [total-count {:keys [uci white draws black] :as option}]
-  (let [total (total-option option)
-        white (float (/ white total))
-        black (float (/ black total))]
-    {:uci        uci
-     :white      white
-     :black      black
-     :play-count total
-     :play-pct   (float (/ total total-count))}))
-
-(defn process-options
-  [options]
-  (let [total-count
-        (->> options
-             (map total-option)
-             (reduce +))]
-    (mapv #(process-option total-count %) options)))
-
-(defn moves->options
-  [{:keys [group since color player local?]
-    :or   {since (get-in defaults [:history :since])}
-    :as   opts}
-   moves]
-  (let [speeds  (get-in defaults [:history :speeds])
-        ratings (get-in defaults [:history :ratings])
-        url     (if local?
-                  (:local urls)
-                  (:public urls))]
-    (try+
-     (-> url
-         (str (name group))
-         (http/get
-          {:query-params
-           (cond-> {:moves (get-in defaults [:history :moves])
-                    :topGames (get-in defaults [:history :top-games])
-                    :play (str/join "," moves)}
-             (= group :lichess)
-             (merge
-              {:recentGames (get-in defaults [:history :recent-games])
-               :speeds      (str/join "," speeds)
-               :ratings     (str/join "," ratings)})
-             (= group :player)
-             (merge
-              {:recentGames (get-in defaults [:history :recent-games])
-               :player      player
-               :color       (name color)
-               :since       since
-               :speeds      (str/join "," speeds)}))})
-         :body
-         util/from-json
-         :moves
-         process-options)
-     (catch [:status 429] _
-       (log/info "Hit the move history rate limit. Waiting one minute before resuming requests.")
-       (Thread/sleep 60000)
-       (moves->options opts moves))
-     (catch Object _
-       (log/error (:throwable &throw-context) "error for moves: " moves)
-       (throw+)))))
-
-(defn- expand-moves
-  [{:keys [filter-pct local? moves parent-pct]}]
-  (->> moves
-       (moves->options {:group :lichess :local? local?})
-       (filter #(< filter-pct (* parent-pct (:play-pct %))))
-       (map (fn [move]
-              (merge move
-                     {:moves (conj moves (:uci move))
-                      :pct   (* parent-pct (:play-pct move))})))))
-
-(defn- expand-movesets
-  [{:keys [filter-pct
-           local?
-           movesets]
-    :or   {filter-pct (get-in defaults [:algo :filter-pct])}
-    :as   opts}]
-  (reduce
-   (fn [acc {:keys [moves pct] :as move}]
-     (if-let [moveset (seq (expand-moves
-                            {:moves      moves
-                             :parent-pct pct
-                             :filter-pct filter-pct
-                             :local?     local?}))]
-       (-> acc
-           (update :tree #(reduce util/add-tree-branch % moveset))
-           (update :movesets into moveset))
-       acc))
-   (assoc opts :movesets [])
-   movesets))
-
-(defn- prepare-engine-options
-  [{:keys [moves] :as opts}]
-  (let [opts (-> defaults :engine (merge opts))
-        {:keys [depth candidates]} (cloud-eval/fen->cloud-eval
-                                    (util/ucis->fen moves))]
-    (if (some-> depth
-                (> (:depth opts)))
-      candidates
-      (ngn/moves->engine-options opts))))
-
-(defn- choose-moves
-  [{:keys [allowable-loss
-           color
-           local?
-           movesets
-           player
-           since
-           use-engine?]
-    :or   {allowable-loss  (get-in defaults [:engine :allowable-loss])
-           since           (get-in defaults [:history :since])}
-    :as   opts}]
-  (reduce
-   (fn [acc {:keys [moves] :as moveset}]
-     (let [new-move
-           (-> opts
-               (merge
-                moveset
-                {#_#_
-                 :masters         (moves->options
-                                   {:group :masters
-                                    :local? local?}
-                                   moves)
-                 :lichess         (moves->options
-                                   {:group :lichess
-                                    :local? local?}
-                                   moves)
-                 :engine          (when use-engine?
-                                    (prepare-engine-options
-                                     (assoc opts :moves moves)))})
-               (cond->
-                   (some? player)
-                 (assoc :player (moves->options
-                                 {:group  :player
-                                  :color  color
-                                  :player player
-                                  :since  since
-                                  :local? local?}
-                                 moves)))
-               strategy/choose-move)]
-       (if (:uci new-move)
-         (-> acc
-             (update :tree util/add-tree-branch new-move)
-             (update :movesets conj (assoc moveset :moves (:moves new-move))))
-         acc)))
-   (assoc opts :movesets [])
-   movesets))
-
-(defn- overrides->uci
-  [overrides]
-  (->> overrides
-       (map
-        (fn [[base tip]]
-          (let [ucis (util/sans->ucis (conj base tip))
-                base (into [] (drop-last ucis))
-                tip (last ucis)]
-            [base tip])))
-       (into {})))
-
-(defn- initialize-moveset
-  [{:keys [moves color local? use-engine? allowable-loss] :as opts}]
-  (assoc
-   (reduce
-    (fn [{:keys [pct stack] :as acc} move]
-      (let [move-eval (->> stack
-                           (moves->options
-                            {:group :lichess
-                             :local? local?})
-                           (filter #(= move (:uci %)))
-                           first)
-            score
-            (when use-engine?
-              (->> (assoc opts :moves stack)
-                   prepare-engine-options
-                   (filter #(= move (:uci %)))
-                   first
-                   :score))]
-        (-> move-eval
-            (assoc :stack (conj stack move))
-            (assoc :score score)
-            (assoc :chosen?
-                   (if (= color (util/whose-turn? stack))
-                     true
-                     false))
-            (assoc :pct
-                   (if (= color (util/whose-turn? stack))
-                     pct
-                     (* pct (:play-pct move-eval)))))))
-    {:pct 1.0 :stack []}
-    moves)
-   :moves
-   moves))
+(defn- build-step
+  [opts]
+  ((if (my-turn? opts)
+     choose-moves
+     expand-movesets)
+   opts))
 
 (defn build-repertoire
-  [{:keys [color moves] :as opts}]
-  (let [initial-moveset (initialize-moveset opts)]
-    (loop [opts
-           (merge opts
-                  {:tree     (util/add-tree-branch nil initial-moveset)
-                   :movesets [initial-moveset]})]
-      (let [move-selector
-            (if (->> opts
-                     :movesets
-                     first
-                     :moves
-                     util/whose-turn?
-                     (= color))
-              choose-moves
-              expand-movesets)]
+  "Build a tree of moves and their attributes corresponding to
+  an opening stratategy based on the passed options.
+
+  Conditionally runs stats and exports as PGN"
+  [{:keys [log-stats? export? export-path] :as opts}]
+  (let [move-tree
+        (loop [opts (init-opts opts)]
           (if (empty? (:movesets opts))
             (:tree opts)
-            (recur (move-selector opts)))))))
-
-(def overrides
-  {["e4" "e5"]                       "Nf3"
-   ["e4" "c5"]                       "Nf3"
-   ["e4" "e6"]                       "d4"
-   ["e4" "c5" "Nf3" "d6"]            "d4"
-   ["d4" "f5"]                       "e4"
-   ["d4" "b6"]                       "e4"
-   ["d4" "d5" "c4" "c6" "Nf3" "Nf6"] "Qc2"})
-
-(defn build-and-export
-  [config]
-  (-> config
-      (update :moves util/sans->ucis)
-      (update :overrides overrides->uci)
-      build-repertoire
-      export/export-repertoire))
+            (recur (build-step opts))))]
+    (cond-> move-tree
+      log-stats?
+      stat/log-stats
+      export?
+      (export/export-repertoire export-path))))
 
 (comment
 
-  (-> "http://localhost:9002/lichess"
-      (http/get
-       {:query-params
-        {:moves       30
-         :topGames    0
-         :play        "e2e4,c7c5,b1c3"
-         :recentGames 0
-         :speeds      "bullet,blitz,rapid"
-         :ratings     "2000,2200,2500"}})
-      :body
-      util/from-json
-      :moves
-      process-options)
+  (def overrides
+    {["e4" "e5"]                       "Nf3"
+     ["e4" "c5"]                       "Nf3"
+     ["e4" "e6"]                       "d4"
+     ["e4" "c5" "Nf3" "d6"]            "d4"
+     ["d4" "f5"]                       "e4"
+     ["d4" "b6"]                       "e4"
+     ["d4" "d5" "c4" "c6" "Nf3" "Nf6"] "Qc2"})
 
-  (let [config
+  (def ruy-lopez
+    (let [opts
+          {:allowable-loss  0.1
+           :color           :white
+           :filter-pct      0.01
+           :move-choice-pct 0.01
+           :moves           ["e4" "e5" "Nf3" "Nc6" "Bb5"]
+           :use-engine?     true
+           :log-stats?      true
+           :export?         true
+           #_#_
+           :local?          true
+           :masters?        true
+           #_#_
+           :overrides       overrides
+           #_#_
+           :player          "JackSilver"}]
+      (build-repertoire opts)))
+
+  (let [opts
         {:allowable-loss  0.1
          :color           :white
-         :filter-pct      0.01
-         :move-choice-pct 0.01
-         :moves           ["e4" "e5" "Nf3" "Nc6" "Bb5"]
-         :use-engine?     true
-         :local?          true
-         #_#_
-         :overrides       overrides
-         #_#_
-         :player          "JackSilver"}]
-    (build-and-export config))
-
-  (let [config
-        {:allowable-loss  0.1
-         :color           :white
-         :filter-pct      0.01
+         :filter-pct      0.001
          :move-choice-pct 0.01
          :use-engine?     true
+         :log-stats?      true
+         :export?         true
+         :masters?        true
          #_#_
          :local?          true}]
-    (map #(build-and-export (assoc config :moves %))
+    (map #(build-repertoire (assoc opts :moves %))
          [["e4" "e5" "Nf3" "Nc6" "Bb5"]
           ["e4" "e5" "Nf3" "Nc6" "Bc4"]
           ["e4" "e5" "Nf3" "Nc6" "d4"]

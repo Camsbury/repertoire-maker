@@ -1,4 +1,4 @@
-(ns repertoire-maker.test
+(ns repertoire-maker.util.test
   (:require
    [clojure.edn :as edn]
    [clojure.java.io :as io]

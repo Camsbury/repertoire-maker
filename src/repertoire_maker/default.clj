@@ -2,10 +2,10 @@
 
 (def defaults
   {:algo
-   {:sigmoid-scale   -0.00575295
-    :filter-pct      0.01
-    :min-plays       100
-    :move-choice-pct 0.01}
+   {:filter-pct        0.01
+    :min-plays         100
+    :min-total-masters 500
+    :move-choice-pct   0.01}
    :engine
    {:allowable-loss 0.9
     :move-count     10

@@ -2,7 +2,7 @@
   (:require
    [taoensso.timbre :as log]
    [repertoire-maker.score :as score]
-   [repertoire-maker.util :as util]
+   [repertoire-maker.util.web :as web]
    [slingshot.slingshot :refer [try+ throw+]]
    [clojure.string :as str]
    [clj-http.client :as http]))
@@ -37,7 +37,7 @@
       {:fen fen
        :multiPv breadth}})
     :body
-    util/from-json
+    web/from-json
     parse-cloud-eval)
    (catch [:status 429] _
      ;; NOTE: could just switch to local eval to save time
@@ -61,4 +61,4 @@
       ;; 5 is what lichess caches deeply
       :multiPv 5}})
    :body
-   util/from-json))
+   web/from-json))

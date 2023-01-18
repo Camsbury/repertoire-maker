@@ -1,7 +1,7 @@
-(ns repertoire-maker.core-test
+(ns repertoire-maker.history-test
   (:require
-   [repertoire-maker.core :as sut]
-   [repertoire-maker.test :refer [close-to]]
+   [repertoire-maker.history :as sut]
+   [repertoire-maker.util.test :refer [close-to]]
    [clojure.test :as t :refer [deftest is]]))
 
 (deftest process-option-test

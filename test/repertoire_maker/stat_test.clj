@@ -2,7 +2,7 @@
   (:require
    [flatland.ordered.map]
    [repertoire-maker.stat :as sut]
-   [repertoire-maker.test :refer [close-to load-fixtures]]
+   [repertoire-maker.util.test :refer [close-to load-fixtures]]
    [clojure.test :as t :refer [is deftest]]))
 
 (deftest weighted-stat-test

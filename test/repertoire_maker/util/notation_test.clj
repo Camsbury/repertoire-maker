@@ -1,10 +1,6 @@
-(ns repertoire-maker.util-test
-  (:require [repertoire-maker.util :as sut]
+(ns repertoire-maker.util.notation-test
+  (:require [repertoire-maker.util.notation :as sut]
             [clojure.test :as t :refer [deftest is]]))
-
-(deftest whose-turn?-test
-  (is (= :white (sut/whose-turn? [])))
-  (is (= :black (sut/whose-turn? ["e4" "e5" "Nf3"]))))
 
 (deftest sans->ucis-test
   (is (= ["e2e4" "e7e5" "g1f3"] (sut/sans->ucis ["e4" "e5" "Nf3"]))))
