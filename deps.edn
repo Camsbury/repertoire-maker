@@ -11,6 +11,7 @@
          org.slf4j/jcl-over-slf4j         {:mvn/version "2.0.6"}
          com.taoensso/timbre              {:mvn/version "6.0.4"}
          ;; others
+         com.github.luben/zstd-jni           {:mvn/version "1.5.2-5"}
          camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
          slingshot/slingshot                 {:mvn/version "0.12.2"}
          environ/environ                     {:mvn/version "1.2.0"}

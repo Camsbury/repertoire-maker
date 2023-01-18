@@ -18,6 +18,7 @@ in
       python-custom
       stockfish
       neil
+      zstd
     ];
     shellHooks = ''
       export PYTHON_HOME=${python-custom}
