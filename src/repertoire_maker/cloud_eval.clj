@@ -45,7 +45,7 @@
      (Thread/sleep 60000)
      (fen->cloud-eval fen))
    (catch [:status 404] _
-     (log/info (str "Cloud eval for fen: " fen " is unavailable"))
+     (log/debug (str "Cloud eval for fen: " fen " is unavailable"))
      nil)
    (catch Object _
      (log/error (:throwable &throw-context) "error for fen: " fen)

@@ -125,7 +125,7 @@
 
 (defn log-stats
   [move-tree]
-  (log/info
+  (println
    "stats: "
    {:average-depth (average-depth move-tree)
     :width         (tree-width    move-tree)

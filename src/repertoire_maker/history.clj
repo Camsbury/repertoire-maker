@@ -73,7 +73,7 @@
        (Thread/sleep 60000)
        (moves->candidates opts moves))
      (catch Object _
-       (log/info (:throwable &throw-context) "error for moves: " moves)
+       (log/error (:throwable &throw-context) "error for moves: " moves)
        (throw+)))))
 
 
