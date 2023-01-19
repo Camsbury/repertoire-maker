@@ -1,6 +1,7 @@
 (ns repertoire-maker.history
   (:require
    [taoensso.timbre :as log]
+   [repertoire-maker.util.notation :as not]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.util.web :as web]
    [slingshot.slingshot :refer [try+ throw+]]
@@ -57,7 +58,7 @@
           {:query-params
            (cond-> {:moves (get-in defaults [:history :moves])
                     :topGames (get-in defaults [:history :top-games])
-                    :play (str/join "," moves)}
+                    :fen      (not/ucis->fen moves)}
              (= group :lichess)
              (merge
               {:recentGames (get-in defaults [:history :recent-games])
