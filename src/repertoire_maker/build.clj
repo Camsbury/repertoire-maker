@@ -7,9 +7,9 @@
    [repertoire-maker.util.tree :as tree]))
 
 (defn- expand-moves
-  [{:keys [filter-pct local? moves parent-pct]}]
-  (->> moves
-       (h/moves->candidates {:group :lichess :local? local?})
+  [{:keys [filter-pct moves parent-pct] :as opts}]
+  (->> (assoc opts :group :lichess)
+       h/moves->candidates
        (filter #(< filter-pct (* parent-pct (:play-pct %))))
        (map (fn [move]
               (merge move

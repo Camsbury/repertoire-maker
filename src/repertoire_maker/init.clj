@@ -29,8 +29,8 @@
 (defn- init-move-eval
   [{:keys [stack move pct] :as opts}]
   (let [move-eval
-        (->> stack
-             (h/moves->candidates (assoc opts :group :lichess))
+        (->> (merge opts {:group :lichess :moves stack})
+             h/moves->candidates
              (filter #(= move (:uci %)))
              first)
 

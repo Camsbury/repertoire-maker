@@ -35,10 +35,9 @@
     (mapv #(process-option total-count %) candidates)))
 
 (defn moves->candidates
-  [{:keys [group since color player local?]
+  [{:keys [group since color moves player local?]
     :or   {since (get-in defaults [:history :since])}
-    :as   opts}
-   moves]
+    :as   opts}]
   (let [speeds  (get-in defaults [:history :speeds])
         ratings (get-in defaults [:history :ratings])
         url     (if local?
@@ -71,7 +70,7 @@
      (catch [:status 429] _
        (log/info "Hit the move history rate limit. Waiting one minute before resuming requests.")
        (Thread/sleep 60000)
-       (moves->candidates opts moves))
+       (moves->candidates opts))
      (catch Object _
        (log/error (:throwable &throw-context) "error for moves: " moves)
        (throw+)))))

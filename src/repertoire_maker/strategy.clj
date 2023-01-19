@@ -24,14 +24,13 @@
       move-candidates)))
 
 (defn- prepare-masters-candidates
-  [{:keys [masters? min-total-masters moves]
+  [{:keys [masters? min-total-masters]
     :or   {min-total-masters (get-in defaults [:algo :min-total-masters])}
     :as opts}]
   (when masters?
     (let [candidates
           (h/moves->candidates
-           (assoc opts :group :masters)
-           moves)
+           (assoc opts :group :masters))
 
           total-plays (->> candidates
                            (map :play-count)
@@ -40,11 +39,10 @@
         candidates))))
 
 (defn- prepare-player-move
-  [{:keys [player moves] :as opts} engine-filter]
+  [{:keys [player] :as opts} engine-filter]
   (when player
-    (some->> moves
-             (h/moves->candidates
-              (assoc opts :group :player))
+    (some->> (assoc opts :group :player)
+             h/moves->candidates
              engine-filter
              first
              :uci)))
@@ -66,7 +64,7 @@
         overridden-move    (get overrides moves)
         lichess-candidates (delay (-> opts
                                       (assoc :group :lichess)
-                                      (h/moves->candidates moves)))
+                                      h/moves->candidates))
         candidates         (or (prepare-masters-candidates opts)
                                @lichess-candidates)
         chosen-move
