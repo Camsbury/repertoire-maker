@@ -27,11 +27,18 @@
         (sort-by :score >)
         (into []))})
 
+(defn- do-get-cloud-eval
+  [url params]
+  (http/get url params))
+
+(def get-cloud-eval
+  (memoize do-get-cloud-eval))
+
 (defn fen->cloud-eval
   [fen]
   (try+
    (->
-    (http/get
+    (get-cloud-eval
      url
      {:query-params
       {:fen fen
@@ -54,10 +61,10 @@
 
 (comment
   (->
-   (http/get
+   (get-cloud-eval
     "https://lichess.org/api/cloud-eval"
     {:query-params
-     {:fen "rnb1k2r/1pq1bppp/p2ppn2/6B1/3NPP2/2N3P1/PPP4P/R2QKB1R w KQkq - 1 9"
+     {:fen "rnbqkb1r/pp2pppp/3p1n2/8/3QP3/2N2N2/PPP2PPP/R1B1KB1R b KQkq - 0 5"
       ;; 5 is what lichess caches deeply
       :multiPv 5}})
    :body

@@ -34,6 +34,13 @@
              (reduce +))]
     (mapv #(process-option total-count %) candidates)))
 
+(defn- do-query-history
+  [url params]
+  (http/get url params))
+
+(def query-history
+  (memoize do-query-history))
+
 (defn moves->candidates
   [{:keys [group since color moves player local?]
     :or   {since (get-in defaults [:history :since])}
@@ -46,7 +53,7 @@
     (try+
      (-> url
          (str (name group))
-         (http/get
+         (query-history
           {:query-params
            (cond-> {:moves (get-in defaults [:history :moves])
                     :topGames (get-in defaults [:history :top-games])
@@ -77,12 +84,14 @@
 
 
 (comment
-  (-> "http://localhost:9002/lichess"
-      (http/get
+  (-> :public
+      urls
+      (str "lichess")
+      (query-history
        {:query-params
         {:moves       30
          :topGames    0
-         :play        "e2e4,c7c5,b1c3"
+         :play        "e2e4,c7c5,g1f3"
          :recentGames 0
          :speeds      "bullet,blitz,rapid"
          :ratings     "2000,2200,2500"}})
