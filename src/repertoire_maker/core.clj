@@ -1,7 +1,7 @@
 (ns repertoire-maker.core
   (:require
    [taoensso.timbre :as log]
-   [repertoire-maker.build :refer [expand-movesets choose-moves]]
+   [repertoire-maker.build :refer [expand-movesets traverse-chosen-move]]
    [repertoire-maker.export :as export]
    [repertoire-maker.init :refer [init-opts]]
    [repertoire-maker.stat :as stat]
@@ -18,7 +18,7 @@
 (defn- build-step
   [opts]
   ((if (my-turn? opts)
-     choose-moves
+     traverse-chosen-move
      expand-movesets)
    opts))
 

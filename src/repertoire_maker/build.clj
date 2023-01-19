@@ -38,7 +38,7 @@
    (assoc opts :movesets [])
    movesets))
 
-(defn choose-moves
+(defn traverse-chosen-move
   [{:keys [movesets]
     :as   opts}]
   (reduce
