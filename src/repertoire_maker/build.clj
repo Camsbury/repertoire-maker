@@ -7,7 +7,9 @@
    [repertoire-maker.util.tree :as tree]))
 
 (defn- expand-moves
-  [{:keys [filter-pct moves parent-pct] :as opts}]
+  [{:keys [filter-pct moves parent-pct]
+    :or   {filter-pct (get-in defaults [:algo :filter-pct])}
+    :as opts}]
   (->> (assoc opts :group :lichess)
        h/moves->candidates
        (filter #(< filter-pct (* parent-pct (:play-pct %))))
@@ -17,10 +19,7 @@
                       :pct   (* parent-pct (:play-pct move))})))))
 
 (defn expand-movesets
-  [{:keys [filter-pct
-           local?
-           movesets]
-    :or   {filter-pct (get-in defaults [:algo :filter-pct])}
+  [{:keys [filter-pct local? movesets]
     :as   opts}]
   (reduce
    (fn [acc {:keys [moves pct]}]

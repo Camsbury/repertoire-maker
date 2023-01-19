@@ -23,22 +23,29 @@
   ([move-tree path]
    (let [game (pgn/Game)]
      ;;  traversal writing the game tree
-     (loop [stack (mapv (fn [move] [[move] [game]]) (keys move-tree))]
+     (loop [stack (mapv (fn [move] [[move] [game]]) (reverse (keys move-tree)))]
        (when (seq stack)
          (let [[moves nodes] (last stack)
-               nodes         (conj nodes
-                                   (py. (last nodes)
-                                        "add_variation"
-                                        (py. chess/Move "from_uci" (last moves))))
-               next          (keys (get-in-tree move-tree moves))]
+               nodes         (->> moves
+                                  last
+                                  (py. chess/Move "from_uci")
+                                  (py. (last nodes) "add_variation")
+                                  (conj nodes))
+               next          (->> moves
+                                  (get-in-tree move-tree)
+                                  keys
+                                  reverse)
+               stack         (->> stack
+                                  drop-last
+                                  (into []))]
            (if (seq next)
              (recur
               (reduce
                (fn [acc move]
                  (conj acc [(conj moves move) nodes]))
-               (drop-last stack)
+               stack
                next))
-             (recur (drop-last stack))))))
+             (recur stack)))))
      (if path
        ;; NOTE: maybe need to with-out-str and print, idk
        (spit path game)
