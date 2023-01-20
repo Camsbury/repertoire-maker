@@ -68,14 +68,16 @@
     moves))
 
 
+;; TODO: update moves to ucis after one big loop completion
 (defn prepare-engine-candidates
-  [{:keys [use-engine? moves] :as opts}]
+  [{:keys [use-engine? moves color] :as opts}]
   (when use-engine?
     (let [opts (-> defaults :engine (merge opts))
 
           {:keys [depth candidates]}
           (cloud-eval/fen->cloud-eval
-           (not/ucis->fen moves))]
+           {:fen   (not/ucis->fen moves)
+            :color color})]
 
       (if (some-> depth
                   (> (:depth opts)))

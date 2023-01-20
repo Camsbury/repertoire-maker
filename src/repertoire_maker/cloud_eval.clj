@@ -19,11 +19,19 @@
   {:uci (first (str/split moves #" "))
    :score (score/standardize-score pv)})
 
+(defn- flip-if-black
+  [color]
+  (if (= :black color)
+    (fn [{:keys [cp mate] :as pv}]
+      (merge pv {:cp (some->> cp (* -1)) :mate (some->> mate (* -1))}))
+    identity))
+
 (defn- parse-cloud-eval
-  [{:keys [depth pvs]}]
+  [{:keys [color depth pvs]}]
   {:depth depth
    :candidates
    (->> pvs
+        (map (flip-if-black color))
         (map uci-and-score)
         (sort-by :score >)
         (into []))})
@@ -36,7 +44,7 @@
   (memoize do-get-cloud-eval))
 
 (defn fen->cloud-eval
-  [fen]
+  [{:keys [fen color] :as opts}]
   (try+
    (->
     (get-cloud-eval
@@ -46,12 +54,13 @@
        :multiPv breadth}})
     :body
     web/from-json
+    (assoc :color color)
     parse-cloud-eval)
    (catch [:status 429] _
      ;; NOTE: could just switch to local eval to save time
      (log/info "Hit the cloud eval rate limit. Waiting one minute before resuming requests.")
      (Thread/sleep 60000)
-     (fen->cloud-eval fen))
+     (fen->cloud-eval opts))
    (catch [:status 404] _
      (log/debug (str "Cloud eval for fen: " fen " is unavailable"))
      nil)
@@ -61,12 +70,7 @@
 
 
 (comment
-  (->
-   (get-cloud-eval
-    "https://lichess.org/api/cloud-eval"
-    {:query-params
-     {:fen "rnbqkb1r/pp2pppp/3p1n2/8/3QP3/2N2N2/PPP2PPP/R1B1KB1R b KQkq - 0 5"
-      ;; 5 is what lichess caches deeply
-      :multiPv 5}})
-   :body
-   web/from-json))
+  (fen->cloud-eval
+   {:fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+    :color :black})
+  )
