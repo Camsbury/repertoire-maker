@@ -6,7 +6,7 @@
    [repertoire-maker.strategy :as strategy]
    [repertoire-maker.util.tree :as tree]))
 
-(defn- expand-moves
+(defn expand-moves
   [{:keys [filter-pct moves parent-pct]
     :or   {filter-pct (get-in defaults [:algo :filter-pct])}
     :as opts}]

@@ -25,6 +25,8 @@
      :white      white
      :black      black
      :play-count total
+     :prob       (float (/ total total-count))
+     ;; TODO: remove once we switch over to the single loop
      :play-pct   (float (/ total total-count))}))
 
 (defn process-candidates

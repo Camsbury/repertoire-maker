@@ -26,6 +26,7 @@
        first
        :score))
 
+;; TODO: rewrite to include masters, forget about "chosen"
 (defn- init-move-eval
   [{:keys [stack move pct] :as opts}]
   (let [move-eval
@@ -46,6 +47,7 @@
                       (util/whose-turn? stack))
           :pct     pct}))))
 
+;; TODO: rewrite for the new tree module
 (defn init-opts
   [opts]
   (let [{:keys [moves] :as opts}
@@ -71,4 +73,3 @@
      opts
      {:tree (tree/add-tree-branch moveset)
       :movesets [moveset]})))
-

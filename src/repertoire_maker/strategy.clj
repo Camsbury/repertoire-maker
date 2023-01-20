@@ -53,6 +53,18 @@
        (filter #(= (:uci move) (:uci %)))
        first))
 
+;; TODO: start integration of a depth-first traversal of moves up to
+;; `search-depth` with `branching-factor` moves considered at each ply.
+;; starting from the leaf, calculate the aggregate stats of the parents,
+;; then choose the move to make based on these
+
+;; so enumerate all popular moves as usual for the opponent
+;; and enumerate all the engine playable moves for you
+;; can choose based on weighted score or loss%
+
+;; should end up as a rewrite of this function that does the same for when
+;; `search-depth` = 1
+
 (defn choose-move
   "This is the core of the entire repertoire. What move do you make in a given
   position?"

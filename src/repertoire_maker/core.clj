@@ -52,19 +52,21 @@
 
   (let [opts
         {:allowable-loss  0.05
-         :color           :white
-         :filter-pct      0.001
+         :color           :black
+         :filter-pct      0.01
          :move-choice-pct 0.01
          :use-engine?     true
          :log-stats?      true
          :export?         true
+         :moves           ["e4"]
          :masters?        true}]
     (build-repertoire opts))
 
+
+
   (let [opts
-        {:allowable-loss  0.1
-         :color           :white
-         :filter-pct      0.1
+        {:allowable-loss  0.05
+         :filter-pct      0.01
          :move-choice-pct 0.01
          :use-engine?     true
          :log-stats?      true
@@ -73,7 +75,19 @@
          #_#_
          :local?          true}]
     (dorun
-     (map #(build-repertoire (assoc opts :moves %))
-          [["e4"]])))
-
+     (map (fn [additional-opts]
+            (-> opts
+                (merge additional-opts)
+                build-repertoire))
+          [{:moves ["e4"]
+            :color :white}
+           {:moves  ["d4"]
+            :color :white}
+           {:color :black
+            :moves ["d4" "Nf6"]}
+           {:color :black
+            :moves ["e4" "c6"]}
+           {:color :black
+            :moves ["e4" "c5"]}
+           {:color :black}])))
   )
