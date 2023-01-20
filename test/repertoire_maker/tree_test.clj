@@ -183,7 +183,20 @@
          (is (= stack (:stack res)))
          (is (= node (sut/get-in-tree (:tree res) ["e2e4"])))))))
 
-#_#_#_#_#_
+#_#_#_#_#_#_#_#_#_
+
+(deftest enumerate-candidates-test
+  (is false))
+
+(deftest enumerate-responses-test
+  (is false))
+
+(deftest prune-tree-test
+  (is false))
+
+(deftest initialize-responses-test
+  (is false))
+
 (deftest do-trans-stats-test
   (is false))
 

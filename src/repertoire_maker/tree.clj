@@ -1,6 +1,7 @@
 (ns repertoire-maker.tree
   (:require
    [python-base]
+   [clojure.set :as set]
    [taoensso.timbre :as log]
    [libpython-clj2.python :refer [py. py.-]]
    [libpython-clj2.require :refer [require-python]]
@@ -8,6 +9,7 @@
    [repertoire-maker.history :as h]
    [repertoire-maker.util.core :as util]
    [repertoire-maker.util.notation :as not]
+   [repertoire-maker.default :refer [defaults]]
    [flatland.ordered.map :refer [ordered-map]]))
 
 (require-python
@@ -62,6 +64,19 @@
        (conj :responses)
        vec
        (conj :responses))))
+
+(defn dissoc-in-tree
+  [tree ucis]
+  (let [base (drop-last ucis)
+        tip  (last ucis)]
+    (update-in
+          tree
+          (-> :responses
+              (interpose base)
+              (conj :responses)
+              vec
+              (conj :responses))
+          #(dissoc % tip))))
 
 (defn assoc-tree-branch
   "Insert a branch into the move tree"
@@ -181,41 +196,322 @@
          (base-node color)
          ucis)]
 
-    (log/info "pre-tree node" node)
     {:stack stack
      :tree  (assoc-tree-branch node)}))
 
-;; TODO
-;; NOTE: increase depth by 1 before doing anything, then produce stack if ok
-;; NOTE: push to stack [[Responses, CalcStat]*] - * per candidate
-(defn enumerate-candidates
-  "enumerate all move candidates"
-  [opts])
+(defn- extract-filtered-moves
+  [opts candidates]
+  (let [best-score (->> candidates first :score)
+        allowable-loss (or (:allowable-loss opts)
+                           (get-in defaults [:engine :allowable-loss]))]
+    (->> candidates
+         (filter #(> allowable-loss (/ (:score %) best-score)))
+         (mapv :uci))))
 
-;; TODO
-;; NOTE: this should push to stack [[Candidates, TransStat]*]
-(defn enumerate-responses
-  "enumerate all opponent responses"
-  [opts])
+(defn- filter-engine
+  [opts engine-candidates]
+  (fn
+    [move-candidates]
+    (if (->> engine-candidates
+             (extract-filtered-moves opts)
+             seq?)
+      (filter #(contains? (set engine-candidates) (:uci %)) move-candidates)
+      move-candidates)))
 
-;; TODO
-;; NOTE: this should push to stack [[Responses*, Score@, Prune*]]
-;; * for all leaves that belong to this nodes responses that have > :prob
-;; e.g. e4 has e5, c5, d6 and only e5 has > :prob, so we enumerate all leaves with responses
-;; @ score backwards from leaves up to branches with > :prob (since those will be searched)
-;; then prune all branches with > :prob
-(defn prune-tree
-  [opts])
+(defn- prepare-masters-candidates
+  [{:keys [masters? min-total-masters]
+    :or   {min-total-masters (get-in defaults [:algo :min-total-masters])}
+    :as opts}]
+  (when masters?
+    (let [candidates
+          (h/moves->candidates
+           (assoc opts :group :masters))
 
-;; TODO
-;; NOTE: this should push to stack [[Candidates, Prune, TransStat]*]
-;; * per response
-(defn initialize-responses
-  [opts])
+          total-plays (->> candidates
+                           (map :play-count)
+                           (reduce +))]
+      (when (> total-plays min-total-masters)
+        (map
+         #(set/rename-keys % {:white :white-m :black :black-m})
+         candidates)))))
+
+(defn- prepare-player-move
+  [{:keys [player] :as opts} engine-filter]
+  (when player
+    (some->> (assoc opts :group :player)
+             h/moves->candidates
+             engine-filter
+             first
+             :uci)))
+
+(defn- get-candidate
+  [candidates move]
+  (->> candidates
+       (filter #(= (:uci move) (:uci %)))
+       first))
 
 (defn- agg-stat
   [stat]
   (keyword (str (name stat) "-agg")))
+
+(defn- m-stat
+  [stat]
+  (keyword (str (name stat) "-m")))
+
+(defn- init-agg-stats
+  [node]
+  (let [stats [:white :black :score :white-m :black-m]]
+    (reduce
+     (fn [node stat]
+       (assoc node (agg-stat stat) (get node stat)))
+     node
+     stats)))
+
+;; TODO
+(defn enumerate-candidates
+  "enumerate all move candidates"
+  [{:keys [min-plays min-prob search-depth overrides step tree stack]
+    :or   {min-plays (get-in defaults [:algo :min-plays])
+           min-prob  (get-in defaults [:algo :min-prob])}
+    :as opts}]
+  (let [{:keys [ucis depth]} step
+        depth                (inc depth)
+        {:keys [prob-agg]}   (get-in-tree tree ucis)
+        opts                 (assoc opts :moves ucis)
+        engine-candidates  (ngn/prepare-engine-candidates opts)
+        engine-filter      (filter-engine opts engine-candidates)
+        player-move        (prepare-player-move opts engine-filter)
+        overridden-move    (get overrides ucis)
+        lichess-candidates (delay (-> opts
+                                      (assoc :group :lichess)
+                                      h/moves->candidates))
+        candidates         (or (prepare-masters-candidates opts)
+                               @lichess-candidates)
+        candidates
+        (cond
+          (some? overridden-move)
+          (->> candidates
+               (filter #(= overridden-move (:uci %))))
+          (some? player-move)
+          (->> candidates
+               engine-filter
+               (filter #(= player-move (:uci %))))
+          :else
+          (->> candidates
+               (filter #(< min-plays (:play-count %)))
+               (filter #(< min-prob (:prob %)))
+               engine-filter))
+
+        candidates
+        (map
+         #(merge
+           %
+           {:prob-agg prob-agg
+            :ucis (conj ucis (:uci %))
+            :white (->> %
+                        (get-candidate @lichess-candidates)
+                        :white)
+            :black (->> %
+                        (get-candidate @lichess-candidates)
+                        :black)
+            :score (->> %
+                        (get-candidate @lichess-candidates)
+                        :score)})
+         candidates)
+
+        tree (->> candidates
+                  ;; init agg stats to the same as the nominal stats
+                  (map init-agg-stats)
+                  (reduce assoc-tree-branch tree))
+
+        ;; per candidate (if depth < search-depth)
+        ;; Responses -> CalcStat -> stack
+        stack (if (< depth search-depth)
+                (->> candidates
+                     (reduce
+                      (fn [s c]
+                        (-> s
+                            (conj {:action :calc-stats
+                                   :ucis   (:ucis c)})
+                            (conj {:action :responses
+                                   :ucis   (:ucis c)
+                                   :depth  depth})))
+                      stack))
+                stack)]
+
+    (-> opts
+        (assoc :tree tree)
+        (assoc :stack stack))))
+
+;; TODO: test
+(defn enumerate-responses
+  "enumerate all opponent responses"
+  [{:keys [min-prob step tree stack]
+    :or   {min-prob (get-in defaults [:algo :min-prob])}
+    :as opts}]
+  (let [{:keys [ucis depth]} step
+        {:keys [prob-agg]} (get-in-tree tree ucis)
+        responses
+        (->> (-> opts
+                 (assoc :group :lichess)
+                 (assoc :moves ucis))
+             h/moves->candidates
+             (filter #(< min-prob (:prob %)))
+             (map (fn [move]
+                    (merge move
+                           {:ucis (conj ucis (:uci move))
+                            :prob-agg (* prob-agg (:prob move))}))))
+
+
+        ;; tree is updated with responses as in expand-moves
+        ;; don't worry about stats, we just need prob
+        ;; always created
+        tree (reduce assoc-tree-branch tree responses)
+
+        ;; per response
+        ;; Candidates -> TransStat -> stack
+        stack (->> responses
+                   reverse ; prioritize the most common responses
+                   (reduce
+                    (fn [s r]
+                      (-> s
+                          (conj {:action :trans-stats
+                                 :ucis   (:ucis r)})
+                          (conj {:action :candidates
+                                 :ucis   (:ucis r)
+                                 :depth  depth})))
+                    stack))]
+    (-> opts
+        (assoc :tree tree)
+        (assoc :stack stack))))
+
+(defmulti apply-strategy
+  "Apply a strategy to choose moves"
+  :strategy)
+
+(defmethod apply-strategy :min-loss
+  [{:keys [color children]}]
+  ;; loss is the opposite color
+  (let [color ({:black :white :white :black} color)]
+    (->> children
+         (sort-by
+          (fn [[_ node]]
+            (or
+             (get node (agg-stat (m-stat color)))
+             (get node (agg-stat color)))))
+         ffirst)))
+
+
+(def alternate-stats
+  {:calc-stats  :trans-stats
+   :trans-stats :calc-stats})
+
+
+(defn- do-prune-hooks
+  [action]
+  (fn [[_ {:keys [ucis responses]}]]
+    ;; alternate stat pushes to stack
+    ;; if no responses, then push responses!
+    (into
+     [{:action action
+       :ucis   ucis}]
+     (if (seq responses)
+       (mapcat (do-prune-hooks (alternate-stats action)) responses)
+       [{:action :responses
+         :ucis   ucis}]))))
+
+(defn prune-hooks
+  [[_ {:keys [ucis responses]}]]
+  (into
+   ;; for each filtered child
+   ;; Prune -> stack
+   ;; TransStat -> stack
+   [{:action :prune
+     :ucis   ucis}
+    {:action :trans-stats
+     :ucis   ucis}]
+   (mapcat (do-prune-hooks :calc-stats) responses)))
+
+;; TODO
+(defn prune-tree
+  [{:keys [min-prob step tree stack]
+    :or   {min-prob (get-in defaults [:algo :min-prob])}
+    :as   opts}]
+  (let [{:keys [ucis]} step
+
+        node       (get-in-tree tree ucis)
+        children   (:responses node)
+        choice-uci (-> opts
+                       (assoc :children children)
+                       apply-strategy)
+        tree (->> children
+                  (remove #(= (first %) choice-uci))
+                  (map #(:ucis (second %)))
+                  (reduce tree dissoc-in-tree))
+
+        ucis (conj ucis choice-uci)
+
+        ;; select all responses of the chosen candidate
+        ;; that have prob-agg > min-prob
+        viable-responses
+        (->> ucis
+             (get-in-tree tree)
+             :responses
+             (filter #(< min-prob (:prob-agg %)))
+             ;; push the most common last
+             reverse)
+
+        ;; push to the stack CalcStat for the chosen candidate
+        stack (-> stack
+                  (conj {:action :calc-stats
+                         :ucis   ucis})
+                  (into (mapcat prune-hooks viable-responses)))]
+
+    (-> opts
+        (assoc :tree tree)
+        (assoc :stack stack))))
+
+;; TODO
+;; * per response
+(defn init-responses
+  [{:keys [min-prob step tree stack]
+    :or   {min-prob (get-in defaults [:algo :min-prob])}
+    :as opts}]
+  (let [{:keys [ucis]} step
+        {:keys [prob-agg]} (get-in-tree tree ucis)
+
+        responses
+        (->> (-> opts
+                 (assoc :group :lichess)
+                 (assoc :moves ucis))
+             h/moves->candidates
+             (filter #(< min-prob (:prob %)))
+             (map (fn [move]
+                    (merge move
+                           {:ucis (conj ucis (:uci move))
+                            :prob-agg (* prob-agg (:prob move))}))))
+
+        tree (reduce assoc-tree-branch tree responses)
+
+        ;; for each response
+        ;; Candidates -> Prune -> TransStat -> stack
+        stack (->> responses
+                   reverse ; prioritize the most common responses
+                   (reduce
+                    (fn [s r]
+                      (-> s
+                          (conj {:action :trans-stats
+                                 :ucis   (:ucis r)})
+                          (conj {:action :prune
+                                 :ucis   (:ucis r)})
+                          (conj {:action :candidates
+                                 :ucis   (:ucis r)
+                                 :depth  0})))
+                    stack))]
+
+    (-> opts
+        (assoc :tree tree)
+        (assoc :stack stack))))
 
 (defn do-trans-stats
   [tree ucis]
@@ -295,7 +591,7 @@
           (recur (transfer-stats step))
 
           :init-responses
-          (recur (initialize-responses opts))
+          (recur (init-responses opts))
 
           :prune
           (recur (prune-tree opts)))))))
