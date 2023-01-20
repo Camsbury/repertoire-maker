@@ -15,16 +15,21 @@
 
 ;; params of search-depth, branching-factor
 
-(def base-node
+(defn base-node
   "Numbers based on lichess and engine cache"
-  {:white-m  0.33
-   :black-m  0.24
-   :white    0.49
-   :black    0.45
-   :score    0.53
-   :prob     1.0
-   :prob-agg 1.0
-   :ucis     []})
+  [color]
+  (let [score
+        (if (= :white color)
+          0.531
+          0.484)]
+    {:white-m  0.33
+     :black-m  0.24
+     :white    0.49
+     :black    0.45
+     :score    score
+     :prob     1.0
+     :prob-agg 1.0
+     :ucis     []}))
 
 (defn get-leaves
   "get all the leaf nodes of the tree"
@@ -45,6 +50,16 @@
    (-> :responses
        (interpose ucis)
        (conj :responses)
+       vec)))
+
+(defn resp-in-tree
+  "Get a branch in the tree by uci"
+  [tree ucis]
+  (get-in
+   tree
+   (-> :responses
+       (interpose ucis)
+       (conj :responses)
        vec
        (conj :responses))))
 
@@ -55,7 +70,9 @@
   ([tree {:keys [ucis stack] :as node}]
    (let [stack (or stack ucis)
          tree (or tree {:responses (ordered-map)})
-         node (assoc node :stack stack)]
+         node (-> node
+                  (assoc :stack stack)
+                  (assoc :responses (ordered-map)))]
      (cond
        (empty? ucis)
        (-> node
@@ -69,9 +86,7 @@
        (update-in
         tree
         [:responses (first stack)]
-        #(assoc-tree-branch % (-> {:responses (ordered-map)}
-                                  (merge node)
-                                  (update :stack rest))))
+        #(assoc-tree-branch % (update node :stack rest)))
 
        :else
        tree))))
@@ -95,7 +110,7 @@
        first
        :score))
 
-(defn- init-move-eval
+(defn init-move-eval
   [{:keys [color ucis node prob-agg masters?] :as opts}]
   (let [opts (assoc opts :moves ucis)
 
@@ -153,6 +168,7 @@
            {:action :calc-stats
             :ucis   ucis}))
 
+        ;; FIXME: outer node has metadata, inner node is UCI
         node
         (reduce
          (fn [{:keys [prob-agg ucis]} node]
@@ -162,7 +178,7 @@
                  :prob-agg prob-agg
                  :node     node})
                init-move-eval))
-         base-node
+         (base-node color)
          ucis)]
 
     (log/info "pre-tree node" node)
@@ -203,7 +219,7 @@
 
 (defn do-trans-stats
   [tree ucis]
-  (let [children (get-in-tree tree ucis)]
+  (let [children (resp-in-tree tree ucis)]
     (fn [node stat]
       (->> children
            (map #(get % (agg-stat stat)))
@@ -231,7 +247,7 @@
 
 (defn do-calc-stats
   [tree ucis]
-  (let [children (get-in-tree tree ucis)]
+  (let [children (resp-in-tree tree ucis)]
     (fn [node stat]
       (assoc
        node
