@@ -10,15 +10,15 @@
   ([a b epsilon]
    (< (Math/abs (- a b)) epsilon)))
 
-(defn load-fixtures
-  [& fixture-names]
+(defn load-test-data
+  [& dataset-names]
   (into
    {}
-   (map (fn [fixture-name]
-          [(keyword fixture-name)
+   (map (fn [dataset-name]
+          [(keyword dataset-name)
            (edn/read-string
             {:readers
              {'ordered/map flatland.ordered.map/ordered-map-reader}}
             (slurp
-             (io/resource (str "fixtures/" fixture-name ".edn"))))]))
-   fixture-names))
+             (io/resource (str "test/" dataset-name ".edn"))))]))
+   dataset-names))

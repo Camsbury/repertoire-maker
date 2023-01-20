@@ -1,6 +1,6 @@
 (ns repertoire-maker.tree-test
   (:require [repertoire-maker.tree :as sut]
-            [repertoire-maker.util.test :refer [close-to load-fixtures]]
+            [repertoire-maker.util.test :refer [close-to load-test-data]]
             [flatland.ordered.map :refer [ordered-map]]
             [clojure.edn :as edn]
             [clojure.java.io :as io]
@@ -8,7 +8,7 @@
 
 (deftest starting-state-test
   (let [opts
-        (-> "fixtures/starting-state-opts.edn"
+        (-> "test/starting-state-opts.edn"
             str
             io/resource
             slurp

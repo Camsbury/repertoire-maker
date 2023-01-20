@@ -2,7 +2,7 @@
   (:require
    [flatland.ordered.map]
    [repertoire-maker.stat :as sut]
-   [repertoire-maker.util.test :refer [close-to load-fixtures]]
+   [repertoire-maker.util.test :refer [close-to load-test-data]]
    [clojure.test :as t :refer [is deftest]]))
 
 (deftest weighted-stat-test
@@ -12,7 +12,7 @@
           move-tree-score
           move-tree-score-black
           large-spanish-tree]}
-        (load-fixtures
+        (load-test-data
          "move-tree-1"
          "move-tree-2"
          "move-tree-score"
