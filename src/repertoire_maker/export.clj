@@ -21,6 +21,18 @@
          (conj :responses)))
     (get tree :responses)))
 
+(defn get-in-tree
+  "Get a branch in the tree by uci"
+  [tree ucis]
+  (if (seq ucis)
+    (get-in
+     tree
+     (-> :responses
+         (interpose ucis)
+         (conj :responses)
+         vec))
+    tree))
+
 (defn export-repertoire
   ([move-tree]
    (export-repertoire move-tree nil))
@@ -42,6 +54,7 @@
                                   (conj nodes))
                next          (->> moves
                                   (resp-in-tree move-tree)
+                                  (remove #(:trim? (second %)))
                                   keys
                                   reverse)
                stack         (->> stack

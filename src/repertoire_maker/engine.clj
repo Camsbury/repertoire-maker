@@ -75,14 +75,14 @@
     (let [opts (-> defaults :engine (merge opts))
 
           {:keys [depth candidates]}
-          (merge
-           (cloud-eval/fen->cloud-eval
-            {:fen     (not/ucis->fen moves)
-             :color   color
-             :breadth move-count})
-           (cloud-eval/fen->cloud-eval
-            {:fen   (not/ucis->fen moves)
-             :color color}))]
+          (some-> {:fen     (not/ucis->fen moves)
+                   :color   color
+                   :breadth move-count}
+                  cloud-eval/fen->cloud-eval
+                  (merge
+                   (cloud-eval/fen->cloud-eval
+                    {:fen   (not/ucis->fen moves)
+                     :color color})))]
 
       (if (some-> depth
                   (> (:depth opts)))

@@ -95,8 +95,8 @@
                (filter #(< (or (:min-plays opts)
                                (get-in defaults [:algo :min-plays]))
                            (:play-count %)))
-               (filter #(< (or (:move-choice-pct opts)
-                               (get-in defaults [:algo :move-choice-pct]))
+               (filter #(< (or (:min-cand-prob opts)
+                               (get-in defaults [:algo :min-cand-prob]))
                            (:play-pct %)))
                engine-filter
                (sort-by (get {:black :white :white :black} color))

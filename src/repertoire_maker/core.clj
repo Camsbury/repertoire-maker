@@ -1,27 +1,9 @@
 (ns repertoire-maker.core
   (:require
    [taoensso.timbre :as log]
-   [repertoire-maker.build :refer [expand-movesets traverse-chosen-move]]
    [repertoire-maker.export :as export]
-   [repertoire-maker.init :refer [init-opts]]
    [repertoire-maker.stat :as stat]
-   [repertoire-maker.tree :as tree]
-   [repertoire-maker.util.core :as util]))
-
-(defn- my-turn?
-  [{:keys [movesets color]}]
-  (->> movesets
-       first
-       :moves
-       util/whose-turn?
-       (= color)))
-
-(defn- build-step
-  [opts]
-  ((if (my-turn? opts)
-     traverse-chosen-move
-     expand-movesets)
-   opts))
+   [repertoire-maker.tree :as tree]))
 
 (defn build-repertoire
   "Build a tree of moves and their attributes corresponding to
@@ -44,61 +26,11 @@
 
 (comment
 
-  (def overrides
-    {["e4" "e5"]                       "Nf3"
-     ["e4" "c5"]                       "Nf3"
-     ["e4" "e6"]                       "d4"
-     ["e4" "c5" "Nf3" "d6"]            "d4"
-     ["d4" "f5"]                       "e4"
-     ["d4" "b6"]                       "e4"
-     ["d4" "d5" "c4" "c6" "Nf3" "Nf6"] "Qc2"})
-
-  (let [opts
-        {:allowable-loss  0.05
-         :color           :black
-         :filter-pct      0.01
-         :move-choice-pct 0.01
-         :use-engine?     true
-         :export?         true
-         :moves           ["e4"]
-         :masters?        true}]
-    (build-repertoire opts))
-
-
-
-  (let [opts
-        {:allowable-loss  0.05
-         :filter-pct      0.01
-         :move-choice-pct 0.01
-         :use-engine?     true
-         :log-stats?      true
-         :export?         true
-         :masters?        true
-         #_#_
-         :local?          true}]
-    (dorun
-     (map (fn [additional-opts]
-            (-> opts
-                (merge additional-opts)
-                build-repertoire))
-          [{:moves ["e4"]
-            :color :white}
-           {:moves  ["d4"]
-            :color :white}
-           {:color :black
-            :moves ["d4" "Nf6"]}
-           {:color :black
-            :moves ["e4" "c6"]}
-           {:color :black
-            :moves ["e4" "c5"]}
-           {:color :black}])))
-
-
   (build-repertoire
    {:allowable-loss  0.05
     :color           :white
-    :min-prob        0.1
-    :move-choice-pct 0.01
+    :min-prob-agg        0.1
+    :min-cand-prob 0.01
     :use-engine?     true
     :export?         true
     :strategy        :max-win-over-loss

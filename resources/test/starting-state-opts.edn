@@ -2,7 +2,7 @@
  {:allowable-loss  0.05
   :color           :white
   :filter-pct      0.01
-  :move-choice-pct 0.01
+  :min-cand-prob 0.01
   :use-engine?     true
   :log-stats?      true
   :export?         true
@@ -12,7 +12,7 @@
  {:allowable-loss  0.05
   :color           :black
   :filter-pct      0.01
-  :move-choice-pct 0.01
+  :min-cand-prob 0.01
   :use-engine?     true
   :log-stats?      true
   :export?         true
@@ -22,7 +22,7 @@
  {:allowable-loss  0.05
   :color           :white
   :filter-pct      0.01
-  :move-choice-pct 0.01
+  :min-cand-prob 0.01
   :moves           ["e4" "c5"]
   :use-engine?     true
   :log-stats?      true
@@ -33,7 +33,7 @@
  {:allowable-loss  0.05
   :color           :white
   :filter-pct      0.01
-  :move-choice-pct 0.01
+  :min-cand-prob 0.01
   :moves            ["e4"]
   :use-engine?     true
   :log-stats?      true
@@ -44,7 +44,7 @@
  {:allowable-loss  0.05
   :color           :black
   :filter-pct      0.01
-  :move-choice-pct 0.01
+  :min-cand-prob 0.01
   :moves           ["e4" "c5"]
   :use-engine?     true
   :log-stats?      true
@@ -55,7 +55,7 @@
  {:allowable-loss  0.05
   :color           :black
   :filter-pct      0.01
-  :move-choice-pct 0.01
+  :min-cand-prob 0.01
   :moves            ["e4"]
   :use-engine?     true
   :log-stats?      true

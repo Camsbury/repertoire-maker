@@ -3,11 +3,12 @@
 (def defaults
   {:algo
    {:filter-pct        0.01
-    :min-prob          0.01
+    :min-prob-agg          0.01
+    :min-resp-prob     0.01
+    :min-cand-prob     0.01
     :min-plays         100
     :min-total-masters 500
     :strategy          :min-loss
-    :move-choice-pct   0.01
     :search-depth      2}
    :engine
    {:allowable-loss 0.9

@@ -155,10 +155,6 @@
           :score    (init-score opts)
           :prob-agg prob-agg}))))
 
-;; TODO
-;; basically this should grab the analysis of the starting move
-;; and jam it into the tree, as well as creating the correct
-;; starting stack for the situation
 (defn starting-state
   [{:keys [moves] :as opts}]
   (let [{:keys [ucis color] :as opts}
@@ -272,13 +268,18 @@
      node
      stats)))
 
-;; TODO
 (defn enumerate-candidates
   "enumerate all move candidates"
-  [{:keys [min-plays min-prob search-depth overrides step tree stack]
-    :or   {min-plays    (get-in defaults [:algo :min-plays])
-           min-prob     (get-in defaults [:algo :min-prob])
-           search-depth (get-in defaults [:algo :search-depth])}
+  [{:keys [min-plays
+           min-cand-prob
+           overrides
+           search-depth
+           stack
+           step
+           tree]
+    :or   {min-plays       (get-in defaults [:algo :min-plays])
+           min-cand-prob (get-in defaults [:algo :min-cand-prob])
+           search-depth    (get-in defaults [:algo :search-depth])}
     :as   opts}]
 
   (let [{:keys [ucis depth]} step
@@ -307,7 +308,7 @@
           :else
           (->> candidates
                (filter #(< min-plays (:play-count %)))
-               (filter #(< min-prob (:prob %)))
+               (filter #(< min-cand-prob (:prob %)))
                engine-filter))
 
         candidates
@@ -339,22 +340,11 @@
                            :score)})
          candidates)
 
-        ;; CLEAN - these candidates are being correctly appended
-        ;; _ (when (= ucis ["g1f3" "d7d5"])
-        ;;     (println "PRE-APPEND-TREE" tree)
-        ;;     (println "CANDIDATES: " candidates))
-
         tree (->> candidates
                   ;; init agg stats to the same as the nominal stats
                   (map init-agg-stats)
                   (reduce assoc-tree-branch tree))
 
-        ;; CLEAN
-        ;; _ (when (= ucis ["g1f3" "d7d5"])
-        ;;     (println "POST-APPEND-TREE" tree))
-
-        ;; per candidate (if depth < search-depth)
-        ;; Responses -> CalcStat -> stack
         stack (if (< depth search-depth)
                 (->> candidates
                      (reduce
@@ -372,11 +362,11 @@
         (assoc :tree tree)
         (assoc :stack stack))))
 
-;; TODO: test
 (defn enumerate-responses
   "enumerate all opponent responses"
-  [{:keys [min-prob step tree stack]
-    :or   {min-prob (get-in defaults [:algo :min-prob])}
+  [{:keys [min-resp-prob min-prob-agg step tree stack]
+    :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])
+           min-prob-agg (get-in defaults [:algo :min-prob-agg])}
     :as opts}]
   (let [{:keys [ucis depth]} step
         {:keys [prob-agg]} (get-in-tree tree ucis)
@@ -389,7 +379,10 @@
                  (assoc :group :lichess)
                  (assoc :moves ucis))
              h/moves->candidates
-             (filter #(< min-prob (:prob %)))
+             (filter #(< min-resp-prob (:prob %)))
+             (filter #(or
+                       (not= 0 depth)
+                       (< min-prob-agg (* prob-agg (:prob %)))))
              (map (fn [move]
                     (merge move
                            {:ucis (conj ucis (:uci move))
@@ -397,13 +390,8 @@
                             :prob-agg (* prob-agg (:prob move))}))))
 
 
-        ;; tree is updated with responses as in expand-moves
-        ;; don't worry about stats, we just need prob
-        ;; always created
         tree (reduce assoc-tree-branch tree responses)
 
-        ;; per response
-        ;; Candidates -> TransStat -> stack
         stack (->> responses
                    reverse ; prioritize the most common responses
                    (reduce
@@ -466,7 +454,6 @@
   [action]
   (fn [[_ {:keys [ucis responses]}]]
     ;; alternate stat pushes to stack
-    ;; if no responses, then push responses!
     (into
      [{:action action
        :ucis   ucis}]
@@ -475,9 +462,6 @@
 (defn prune-hooks
   [[_ {:keys [ucis responses]}]]
   (into
-   ;; for each filtered child
-   ;; Prune -> stack
-   ;; TransStat -> stack
    [{:action :prune
      :ucis   ucis}
     {:action :trans-stats
@@ -485,18 +469,35 @@
    (mapcat (do-prune-hooks :calc-stats) responses)))
 
 (defn create-prune-hooks
-  [{:keys [min-prob step tree stack]
-    :or   {min-prob (get-in defaults [:algo :min-prob])}
+  [{:keys [min-prob-agg step tree stack]
+    :or   {min-prob-agg (get-in defaults [:algo :min-prob-agg])}
     :as   opts}]
   (let   [{:keys [ucis]} step
+
+          #_#_
+          _ (log/info "creating prune hooks for " ucis)
           viable-responses
           (->> ucis
                (get-in-tree tree)
                :responses
-               (filter #(< min-prob (:prob-agg (second %))))
+               (filter #(< min-prob-agg (:prob-agg (second %))))
                ;; push the most common last
-               reverse)]
-    (assoc opts :stack (into stack (mapcat prune-hooks viable-responses)))))
+               reverse)
+
+          nonviable-responses
+          (->> ucis
+               (get-in-tree tree)
+               :responses
+               (remove #(< min-prob-agg (:prob-agg (second %)))))
+
+          tree (reduce
+                (fn [t [_ n]] (assoc-tree-branch t (assoc n :trim? true)))
+                tree
+                nonviable-responses)]
+    (merge
+     opts
+     {:tree  tree
+      :stack (into stack (mapcat prune-hooks viable-responses))})))
 
 (defn prune-tree
   [{:keys [step tree stack] :as opts}]
@@ -504,6 +505,11 @@
 
         node       (get-in-tree tree ucis)
         children   (:responses node)
+
+        #_#_
+        _ (when (empty? ucis)
+            (log/info children))
+
         choice-uci (-> opts
                        (assoc :children children)
                        apply-strategy)
@@ -515,7 +521,6 @@
 
         ucis (conj ucis choice-uci)
 
-        ;; push to the stack CalcStat for the chosen candidate
         stack (-> stack
                   (conj {:action :calc-stats
                          :ucis   ucis})
@@ -531,24 +536,26 @@
         (assoc :tree tree)
         (assoc :stack stack))))
 
-;; TODO
-;; * per response
 (defn init-responses
-  [{:keys [min-prob step tree stack]
-    :or   {min-prob (get-in defaults [:algo :min-prob])}
+  [{:keys [min-resp-prob step tree stack]
+    :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])}
     :as opts}]
   (let [{:keys [ucis]} step
         {:keys [prob-agg]} (get-in-tree tree ucis)
+
+        masters-responses
+        (prepare-masters-candidates opts)
 
         responses
         (->> (-> opts
                  (assoc :group :lichess)
                  (assoc :moves ucis))
              h/moves->candidates
-             (filter #(< min-prob (:prob %)))
+             (filter #(< min-resp-prob (:prob %)))
              (map (fn [move]
                     (merge move
                            {:ucis (conj ucis (:uci move))
+                            :prob-m (:prob (get-candidate masters-responses move))
                             :prob-agg (* prob-agg (:prob move))}))))
 
         tree (reduce assoc-tree-branch tree responses)
@@ -573,30 +580,18 @@
         (assoc :tree tree)
         (assoc :stack stack))))
 
-(defn do-trans-stats
-  [tree ucis]
-  (let [children (resp-in-tree tree ucis)]
-    (fn [node stat]
-      (some->> children
-           (map #(get-in % [1 (agg-stat stat)]))
-           (filter some?)
-           seq
-           (apply max)
-           (assoc node (agg-stat stat))))))
-
-;; FIXME: culprit for screwing up the tree
-;; replaces the responses with an empty ordered map...
-;;probably an issue with `do-trans-stats`
 (defn transfer-stats
   "bubble best child stat up to parent"
   [{:keys [step tree] :as opts}]
   (let [{:keys [ucis]} step
-        node
-        (reduce
-         (do-trans-stats tree ucis)
-         (get-in-tree tree ucis) ; is this what I think it is?
-         [:white :black :score :white-m :black-m])]
-    (update opts :tree assoc-tree-branch node)))
+        node (get-in-tree tree ucis)
+        children (:responses node)
+        choice-uci (apply-strategy (assoc opts :children children))]
+    (->> [:white :black :score :white-m :black-m]
+         (map agg-stat)
+         (select-keys (get children choice-uci))
+         (merge node)
+         (update opts :tree assoc-tree-branch))))
 
 (defn- prob-attr
   [stat]
@@ -608,9 +603,8 @@
   [stat children]
   (->> children
        (map second)
-       ;; FIXME currently fails on vanilla masters stats at last calc
-       (map #(* (or 0 (get % stat))
-                (or 0 ((prob-attr stat) %))))
+       (map #(* (or (get % stat) 0)
+                (or ((prob-attr stat) %) 0)))
        (reduce +)))
 
 (defn do-calc-stats
@@ -619,7 +613,10 @@
     (fn [node stat]
       (let [nominal (get node stat)
             prob-non-child
-            (- 1 (->> children (map #(or (get-in % [1 (prob-attr stat)]) 0)) (reduce +)))
+            (->> children
+                 (map #(or (get-in % [1 (prob-attr stat)]) 0))
+                 (reduce +)
+                 (- 1))
             children-nominal (when (not= stat :score)
                                (children-total stat children))
             children-aggregate (children-total (agg-stat stat) children)
@@ -629,25 +626,25 @@
                        (some? prob-non-child)
                        (some? children-nominal)
                        (some? children-aggregate))
-                (+
-                 (if (= stat :score)
-                   (* prob-non-child nominal)
-                   (- nominal children-nominal))
-                 children-aggregate))]
-        (assoc
-         node
-         (agg-stat stat)
-         calced)))))
+              (+
+               (if (= stat :score)
+                 (* prob-non-child nominal)
+                 (- nominal children-nominal))
+               children-aggregate))]
+
+        (assoc node (agg-stat stat) calced)))))
 
 (defn calc-stats
   "weight parent stats based on children"
   [{:keys [step tree] :as opts}]
   (let [{:keys [ucis]} step
+
         node
         (reduce
          (do-calc-stats tree ucis)
          (get-in-tree tree ucis)
          [:white :black :white-m :black-m :score])]
+
     (update opts :tree assoc-tree-branch node)))
 
 (defn build-tree
@@ -658,9 +655,10 @@
       (let [{:keys [action] :as step}
             (peek stack)
 
+            #_#_
             _ (when true
-                (log/info (take 5 stack))
-                #_#_
+                ;; (log/info (take 5 stack))
+                (log/info "step: " step)
                 (println "tree")
                 (println tree))
 
@@ -699,17 +697,29 @@
 (comment
 
   (build-tree
-   {:allowable-loss  0.05
-    :color           :white
-    :min-prob        0.1
-    :move-choice-pct 0.01
-    :use-engine?     true
-    :log-stats?      true
-    :export?         true
-    :strategy        :min-loss
-    :search-depth    1
-    :moves           []
-    :masters?        true})
+   {:allowable-loss 0.05
+    :color          :white
+    :min-prob-agg   0.1
+    :min-cand-prob  0.01
+    :use-engine?    true
+    :log-stats?     true
+    :export?        true
+    :strategy       :min-loss
+    :search-depth   1
+    :moves          []
+    :masters?       true})
+
+  (repertoire-maker.core/build-repertoire
+   {:allowable-loss 0.05
+    :color          :white
+    :min-prob-agg   0.01
+    :min-resp-prob  0.1
+    :min-cand-prob  0.05
+    :use-engine?    true
+    :export?        true
+    :strategy       :max-win-over-loss
+    :search-depth   3
+    :masters?       true})
 
 
 
