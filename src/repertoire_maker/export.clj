@@ -8,14 +8,18 @@
  '[chess     :as chess]
  '[chess.pgn :as pgn])
 
-(defn- get-in-tree
-  [tree moves]
-  (get-in
-   tree
-   (-> :responses
-       (interpose moves)
-       vec
-       (conj :responses))))
+(defn resp-in-tree
+  "Get a branch in the tree by uci"
+  [tree ucis]
+  (if (seq ucis)
+    (get-in
+     tree
+     (-> :responses
+         (interpose ucis)
+         (conj :responses)
+         vec
+         (conj :responses)))
+    (get tree :responses)))
 
 (defn export-repertoire
   ([move-tree]
@@ -23,16 +27,22 @@
   ([move-tree path]
    (let [game (pgn/Game)]
      ;;  traversal writing the game tree
-     (loop [stack (mapv (fn [move] [[move] [game]]) (reverse (keys move-tree)))]
+     (loop [stack (mapv
+                   (fn [move] [[move] [game]])
+                   (->> move-tree
+                        :responses
+                        keys
+                        reverse))]
        (when (seq stack)
          (let [[moves nodes] (last stack)
+               _ (println moves)
                nodes         (->> moves
                                   last
                                   (py. chess/Move "from_uci")
                                   (py. (last nodes) "add_variation")
                                   (conj nodes))
                next          (->> moves
-                                  (get-in-tree move-tree)
+                                  (resp-in-tree move-tree)
                                   keys
                                   reverse)
                stack         (->> stack

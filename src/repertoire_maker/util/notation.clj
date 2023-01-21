@@ -43,8 +43,11 @@
          (if (some? fen)
            (chess/Board fen)
            (chess/Board))]
-     (reduce
-      (fn [b m] (py. b "push_uci" m) b)
-      board
-      ucis)
+     (try
+       (reduce
+        (fn [b m] (py. b "push_uci" m) b)
+        board
+        ucis)
+       (catch Exception e (do (println "ucis: " ucis)
+                              (throw e))))
      (py. board "fen"))))

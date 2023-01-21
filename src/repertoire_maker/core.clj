@@ -5,6 +5,7 @@
    [repertoire-maker.export :as export]
    [repertoire-maker.init :refer [init-opts]]
    [repertoire-maker.stat :as stat]
+   [repertoire-maker.tree :as tree]
    [repertoire-maker.util.core :as util]))
 
 (defn- my-turn?
@@ -29,6 +30,8 @@
   Conditionally runs stats and exports as PGN"
   [{:keys [log-stats? export? export-path] :as opts}]
   (let [move-tree
+        (tree/build-tree opts)
+        #_
         (loop [opts (init-opts opts)]
           (if (empty? (:movesets opts))
             (:tree opts)
@@ -56,7 +59,6 @@
          :filter-pct      0.01
          :move-choice-pct 0.01
          :use-engine?     true
-         :log-stats?      true
          :export?         true
          :moves           ["e4"]
          :masters?        true}]
@@ -90,4 +92,16 @@
            {:color :black
             :moves ["e4" "c5"]}
            {:color :black}])))
+
+
+  (build-repertoire
+   {:allowable-loss  0.05
+    :color           :white
+    :min-prob        0.1
+    :move-choice-pct 0.01
+    :use-engine?     true
+    :export?         true
+    :strategy        :max-win-over-loss
+    :search-depth    2
+    :masters?        true})
   )

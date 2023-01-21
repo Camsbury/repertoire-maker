@@ -206,7 +206,7 @@
 (deftest do-calc-stats-test
   (is false))
 
-(deftest calculate-stats-test
+(deftest calc-stats-test
   (is false))
 
 (deftest build-tree-test

@@ -1,21 +1,13 @@
 (ns repertoire-maker.tree
   (:require
-   [python-base]
    [clojure.set :as set]
    [taoensso.timbre :as log]
-   [libpython-clj2.python :refer [py. py.-]]
-   [libpython-clj2.require :refer [require-python]]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.history :as h]
    [repertoire-maker.util.core :as util]
    [repertoire-maker.util.notation :as not]
    [repertoire-maker.default :refer [defaults]]
    [flatland.ordered.map :refer [ordered-map]]))
-
-(require-python
- '[chess :as chess])
-
-;; params of search-depth, branching-factor
 
 (defn base-node
   "Numbers based on lichess and engine cache"
@@ -30,6 +22,7 @@
      :black    0.45
      :score    score
      :prob     1.0
+     :prob-m   1.0
      :prob-agg 1.0
      :ucis     []}))
 
@@ -47,36 +40,42 @@
 (defn get-in-tree
   "Get a branch in the tree by uci"
   [tree ucis]
-  (get-in
-   tree
-   (-> :responses
-       (interpose ucis)
-       (conj :responses)
-       vec)))
+  (if (seq ucis)
+    (get-in
+     tree
+     (-> :responses
+         (interpose ucis)
+         (conj :responses)
+         vec))
+    tree))
 
 (defn resp-in-tree
   "Get a branch in the tree by uci"
   [tree ucis]
-  (get-in
-   tree
-   (-> :responses
-       (interpose ucis)
-       (conj :responses)
-       vec
-       (conj :responses))))
+  (if (seq ucis)
+    (get-in
+     tree
+     (-> :responses
+         (interpose ucis)
+         (conj :responses)
+         vec
+         (conj :responses)))
+    (get tree :responses)))
 
 (defn dissoc-in-tree
   [tree ucis]
   (let [base (drop-last ucis)
         tip  (last ucis)]
-    (update-in
-          tree
-          (-> :responses
-              (interpose base)
-              (conj :responses)
-              vec
-              (conj :responses))
-          #(dissoc % tip))))
+    (if (seq base)
+      (update-in
+       tree
+       (-> :responses
+           (interpose base)
+           (conj :responses)
+           vec
+           (conj :responses))
+       #(dissoc % tip))
+      (update tree :responses #(dissoc % tip)))))
 
 (defn assoc-tree-branch
   "Insert a branch into the move tree"
@@ -87,7 +86,7 @@
          tree (or tree {:responses (ordered-map)})
          node (-> node
                   (assoc :stack stack)
-                  (assoc :responses (ordered-map)))]
+                  (update :responses #(or % (ordered-map))))]
      (cond
        (empty? ucis)
        (-> node
@@ -143,7 +142,8 @@
 
         move-eval (-> move-eval
                       (assoc :white-m (:white masters-eval))
-                      (assoc :black-m (:black masters-eval)))
+                      (assoc :black-m (:black masters-eval))
+                      (assoc :prob-m  (:prob  masters-eval)))
 
         prob-agg (cond-> prob-agg
                    (not (util/my-turn? color ucis))
@@ -196,8 +196,10 @@
          (base-node color)
          ucis)]
 
-    {:stack stack
-     :tree  (assoc-tree-branch node)}))
+    (merge
+     opts
+     {:stack stack
+      :tree  (assoc-tree-branch node)})))
 
 (defn- extract-filtered-moves
   [opts candidates]
@@ -205,17 +207,20 @@
         allowable-loss (or (:allowable-loss opts)
                            (get-in defaults [:engine :allowable-loss]))]
     (->> candidates
-         (filter #(> allowable-loss (/ (:score %) best-score)))
+         (filter #(< allowable-loss (/ (:score %) best-score)))
          (mapv :uci))))
 
 (defn- filter-engine
   [opts engine-candidates]
-  (fn
-    [move-candidates]
-    (if (->> engine-candidates
-             (extract-filtered-moves opts)
-             seq?)
-      (filter #(contains? (set engine-candidates) (:uci %)) move-candidates)
+  (fn [move-candidates]
+    (if-let
+        [engine-candidates
+         (->> engine-candidates
+              (extract-filtered-moves opts)
+              seq)]
+      (filter
+       #(contains? (set engine-candidates) (:uci %))
+       move-candidates)
       move-candidates)))
 
 (defn- prepare-masters-candidates
@@ -271,22 +276,25 @@
 (defn enumerate-candidates
   "enumerate all move candidates"
   [{:keys [min-plays min-prob search-depth overrides step tree stack]
-    :or   {min-plays (get-in defaults [:algo :min-plays])
-           min-prob  (get-in defaults [:algo :min-prob])}
-    :as opts}]
+    :or   {min-plays    (get-in defaults [:algo :min-plays])
+           min-prob     (get-in defaults [:algo :min-prob])
+           search-depth (get-in defaults [:algo :search-depth])}
+    :as   opts}]
+
   (let [{:keys [ucis depth]} step
         depth                (inc depth)
         {:keys [prob-agg]}   (get-in-tree tree ucis)
         opts                 (assoc opts :moves ucis)
-        engine-candidates  (ngn/prepare-engine-candidates opts)
-        engine-filter      (filter-engine opts engine-candidates)
-        player-move        (prepare-player-move opts engine-filter)
-        overridden-move    (get overrides ucis)
-        lichess-candidates (delay (-> opts
-                                      (assoc :group :lichess)
-                                      h/moves->candidates))
-        candidates         (or (prepare-masters-candidates opts)
-                               @lichess-candidates)
+        engine-candidates    (ngn/prepare-engine-candidates opts)
+        engine-filter        (filter-engine opts engine-candidates)
+        player-move          (prepare-player-move opts engine-filter)
+        overridden-move      (get overrides ucis)
+        lichess-candidates   (delay (-> opts
+                                        (assoc :group :lichess)
+                                        h/moves->candidates))
+        masters-candidates   (prepare-masters-candidates opts)
+        candidates           (or masters-candidates
+                                 @lichess-candidates)
         candidates
         (cond
           (some? overridden-move)
@@ -307,22 +315,43 @@
          #(merge
            %
            {:prob-agg prob-agg
-            :ucis (conj ucis (:uci %))
-            :white (->> %
-                        (get-candidate @lichess-candidates)
-                        :white)
-            :black (->> %
-                        (get-candidate @lichess-candidates)
-                        :black)
-            :score (->> %
-                        (get-candidate @lichess-candidates)
-                        :score)})
+            :ucis     (conj ucis (:uci %))
+            :white    (->> %
+                           (get-candidate @lichess-candidates)
+                           :white)
+            :black    (->> %
+                           (get-candidate @lichess-candidates)
+                           :black)
+            :prob     (->> %
+                           (get-candidate @lichess-candidates)
+                           :prob)
+            :white-m  (->> %
+                           (get-candidate masters-candidates)
+                           :white-m)
+            :black-m  (->> %
+                           (get-candidate masters-candidates)
+                           :black-m)
+            :prob-m   (->> %
+                           (get-candidate masters-candidates)
+                           :prob)
+            :score    (->> %
+                           (get-candidate engine-candidates)
+                           :score)})
          candidates)
+
+        ;; CLEAN - these candidates are being correctly appended
+        ;; _ (when (= ucis ["g1f3" "d7d5"])
+        ;;     (println "PRE-APPEND-TREE" tree)
+        ;;     (println "CANDIDATES: " candidates))
 
         tree (->> candidates
                   ;; init agg stats to the same as the nominal stats
                   (map init-agg-stats)
                   (reduce assoc-tree-branch tree))
+
+        ;; CLEAN
+        ;; _ (when (= ucis ["g1f3" "d7d5"])
+        ;;     (println "POST-APPEND-TREE" tree))
 
         ;; per candidate (if depth < search-depth)
         ;; Responses -> CalcStat -> stack
@@ -351,6 +380,10 @@
     :as opts}]
   (let [{:keys [ucis depth]} step
         {:keys [prob-agg]} (get-in-tree tree ucis)
+
+        masters-responses
+        (prepare-masters-candidates opts)
+
         responses
         (->> (-> opts
                  (assoc :group :lichess)
@@ -360,6 +393,7 @@
              (map (fn [move]
                     (merge move
                            {:ucis (conj ucis (:uci move))
+                            :prob-m (:prob (get-candidate masters-responses move))
                             :prob-agg (* prob-agg (:prob move))}))))
 
 
@@ -389,6 +423,12 @@
   "Apply a strategy to choose moves"
   :strategy)
 
+(defmethod apply-strategy :default
+  [opts]
+  (-> opts
+      (assoc :strategy :min-loss)
+      apply-strategy))
+
 (defmethod apply-strategy :min-loss
   [{:keys [color children]}]
   ;; loss is the opposite color
@@ -399,6 +439,20 @@
             (or
              (get node (agg-stat (m-stat color)))
              (get node (agg-stat color)))))
+         ffirst)))
+
+(defmethod apply-strategy :max-win-over-loss
+  [{:keys [color children]}]
+  (let [opp-color ({:black :white :white :black} color)]
+    (->> children
+         (sort-by
+          (fn [[_ node]]
+            (or
+             (some->
+              (get node (agg-stat (m-stat color)))
+              (/ (get node (agg-stat (m-stat opp-color)))))
+             (/ (get node (agg-stat color))
+                (get node (agg-stat opp-color))))))
          ffirst)))
 
 
@@ -415,10 +469,7 @@
     (into
      [{:action action
        :ucis   ucis}]
-     (if (seq responses)
-       (mapcat (do-prune-hooks (alternate-stats action)) responses)
-       [{:action :responses
-         :ucis   ucis}]))))
+     (mapcat (do-prune-hooks (alternate-stats action)) responses))))
 
 (defn prune-hooks
   [[_ {:keys [ucis responses]}]]
@@ -432,11 +483,22 @@
      :ucis   ucis}]
    (mapcat (do-prune-hooks :calc-stats) responses)))
 
-;; TODO
-(defn prune-tree
+(defn create-prune-hooks
   [{:keys [min-prob step tree stack]
     :or   {min-prob (get-in defaults [:algo :min-prob])}
     :as   opts}]
+  (let   [{:keys [ucis]} step
+          viable-responses
+          (->> ucis
+               (get-in-tree tree)
+               :responses
+               (filter #(< min-prob (:prob-agg (second %))))
+               ;; push the most common last
+               reverse)]
+    (assoc opts :stack (into stack (mapcat prune-hooks viable-responses)))))
+
+(defn prune-tree
+  [{:keys [step tree stack] :as opts}]
   (let [{:keys [ucis]} step
 
         node       (get-in-tree tree ucis)
@@ -444,28 +506,23 @@
         choice-uci (-> opts
                        (assoc :children children)
                        apply-strategy)
+
         tree (->> children
                   (remove #(= (first %) choice-uci))
                   (map #(:ucis (second %)))
-                  (reduce tree dissoc-in-tree))
+                  (reduce dissoc-in-tree tree))
 
         ucis (conj ucis choice-uci)
-
-        ;; select all responses of the chosen candidate
-        ;; that have prob-agg > min-prob
-        viable-responses
-        (->> ucis
-             (get-in-tree tree)
-             :responses
-             (filter #(< min-prob (:prob-agg %)))
-             ;; push the most common last
-             reverse)
 
         ;; push to the stack CalcStat for the chosen candidate
         stack (-> stack
                   (conj {:action :calc-stats
                          :ucis   ucis})
-                  (into (mapcat prune-hooks viable-responses)))]
+                  (conj {:action :create-prune-hooks
+                         :ucis   ucis})
+                  (conj {:action :responses
+                         :ucis   ucis
+                         :depth  0}))]
 
     (-> opts
         (assoc :tree tree)
@@ -517,53 +574,77 @@
   [tree ucis]
   (let [children (resp-in-tree tree ucis)]
     (fn [node stat]
-      (->> children
-           (map #(get % (agg-stat stat)))
+      (some->> children
+           (map #(get-in % [1 (agg-stat stat)]))
+           (filter some?)
+           seq
            (apply max)
            (assoc node (agg-stat stat))))))
 
+;; FIXME: culprit for screwing up the tree
+;; replaces the responses with an empty ordered map...
+;;probably an issue with `do-trans-stats`
 (defn transfer-stats
   "bubble best child stat up to parent"
-  [{:keys [ucis tree] :as opts}]
-  (let [node
+  [{:keys [step tree] :as opts}]
+  (let [{:keys [ucis]} step
+        node
         (reduce
          (do-trans-stats tree ucis)
-         (get-in-tree tree ucis)
-         [:white :black :score])]
+         (get-in-tree tree ucis) ; is this what I think it is?
+         [:white :black :score :white-m :black-m])]
     (update opts :tree assoc-tree-branch node)))
 
-;; FIXME: need a fallback if nils in the children
-;; (notably for masters win%s)
+(defn- prob-attr
+  [stat]
+  (if (#{:white-m :black-m} stat)
+    :prob-m
+    :prob))
+
 (defn- children-total
   [stat children]
   (->> children
-       (map #(* (get % stat)
-                (:prob %)))
+       (map second)
+       ;; FIXME currently fails on vanilla masters stats at last calc
+       (map #(* (or 0 (get % stat))
+                (or 0 ((prob-attr stat) %))))
        (reduce +)))
 
 (defn do-calc-stats
   [tree ucis]
   (let [children (resp-in-tree tree ucis)]
     (fn [node stat]
-      (assoc
-       node
-       (agg-stat stat)
-       (+
-        (if (= stat :score)
-          (* (- 1 (->> children (map :prob) (reduce +)))
-           (get node :score))
-          (- (get node stat)
-             (children-total stat children)))
-        (children-total (agg-stat stat) children))))))
+      (let [nominal (get node stat)
+            prob-non-child
+            (- 1 (->> children (map #(or (get-in % [1 (prob-attr stat)]) 0)) (reduce +)))
+            children-nominal (when (not= stat :score)
+                               (children-total stat children))
+            children-aggregate (children-total (agg-stat stat) children)
 
-(defn calculate-stats
+            calced
+            (when (and (some? nominal)
+                       (some? prob-non-child)
+                       (some? children-nominal)
+                       (some? children-aggregate))
+                (+
+                 (if (= stat :score)
+                   (* prob-non-child nominal)
+                   (- nominal children-nominal))
+                 children-aggregate))]
+        (assoc
+         node
+         (agg-stat stat)
+         calced)))))
+
+(defn calc-stats
   "weight parent stats based on children"
-  [{:keys [ucis tree] :as opts}]
-  (let [node
+  [{:keys [step tree] :as opts}]
+  (let [{:keys [ucis]} step
+        node
         (reduce
          (do-calc-stats tree ucis)
          (get-in-tree tree ucis)
-         [:white :black :score])]
+         [:white :black :white-m :black-m :score])]
     (update opts :tree assoc-tree-branch node)))
 
 (defn build-tree
@@ -574,31 +655,60 @@
       (let [{:keys [action] :as step}
             (peek stack)
 
+            _ (when true
+                    (println "stack")
+                    (println stack)
+                    #_#_
+                    (println "tree")
+                    (println tree))
+
             opts (-> opts
                      (update :stack pop)
                      (assoc  :step  step))]
         (case action
           :candidates
-          (recur (enumerate-candidates opts))
+          (recur
+           (enumerate-candidates opts))
 
           :responses
-          (recur (enumerate-responses opts))
+          (recur
+           (enumerate-responses opts))
 
           :calc-stats
-          (recur (calculate-stats step))
+          (recur
+           (calc-stats opts))
 
           :trans-stats
-          (recur (transfer-stats step))
+          (recur
+           (transfer-stats opts))
 
           :init-responses
-          (recur (init-responses opts))
+          (recur
+           (init-responses opts))
 
           :prune
-          (recur (prune-tree opts)))))))
+          (recur
+           (prune-tree opts))
+
+          :create-prune-hooks
+          (recur
+           (create-prune-hooks opts)))))))
 
 (comment
 
-  (into '(1 2 3) '(4 5 6))
+  (build-tree
+   {:allowable-loss  0.05
+    :color           :white
+    :min-prob        0.1
+    :move-choice-pct 0.01
+    :use-engine?     true
+    :log-stats?      true
+    :export?         true
+    :strategy        :min-loss
+    :search-depth    1
+    :moves           []
+    :masters?        true})
+
 
 
   )

@@ -10,7 +10,7 @@
 
 (def url
   "https://lichess.org/api/cloud-eval")
-(def breadth
+(def lc-breadth
   "The standard for lichess"
   5)
 
@@ -43,34 +43,39 @@
 (def get-cloud-eval
   (memoize do-get-cloud-eval))
 
+(defonce kill-switch
+  (atom false))
+
 (defn fen->cloud-eval
-  [{:keys [fen color] :as opts}]
-  (try+
-   (->
-    (get-cloud-eval
-     url
-     {:query-params
-      {:fen fen
-       :multiPv breadth}})
-    :body
-    web/from-json
-    (assoc :color color)
-    parse-cloud-eval)
-   (catch [:status 429] _
-     ;; NOTE: could just switch to local eval to save time
-     (log/info "Hit the cloud eval rate limit. Waiting one minute before resuming requests.")
-     (Thread/sleep 60000)
-     (fen->cloud-eval opts))
-   (catch [:status 404] _
-     (log/debug (str "Cloud eval for fen: " fen " is unavailable"))
-     nil)
-   (catch Object _
-     (log/error (:throwable &throw-context) "error for fen: " fen)
-     (throw+))))
+  [{:keys [fen color breadth] :as opts}]
+  (when (not @kill-switch)
+    (try+
+     (->
+      (get-cloud-eval
+       url
+       {:query-params
+        {:fen fen
+         :multiPv (or breadth lc-breadth)}})
+      :body
+      web/from-json
+      (assoc :color color)
+      parse-cloud-eval)
+     (catch [:status 429] _
+       ;; NOTE: could just switch to local eval to save time
+       (log/info "Hit the cloud eval rate limit. Waiting one minute before resuming requests.")
+       (Thread/sleep 60000)
+       (fen->cloud-eval opts))
+     (catch [:status 404] _
+       (log/debug (str "Cloud eval for fen: " fen " is unavailable"))
+       nil)
+     (catch Object _
+       (log/info (:throwable &throw-context) "error for fen: " fen)
+       (log/info "Stopping cache access and reverting to local engine")
+       (reset! kill-switch true)))))
 
 
 (comment
   (fen->cloud-eval
    {:fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-    :color :black})
+    :color :white})
   )
