@@ -35,7 +35,6 @@
                         reverse))]
        (when (seq stack)
          (let [[moves nodes] (last stack)
-               _ (println moves)
                nodes         (->> moves
                                   last
                                   (py. chess/Move "from_uci")

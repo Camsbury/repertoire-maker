@@ -452,7 +452,8 @@
               (get node (agg-stat (m-stat color)))
               (/ (get node (agg-stat (m-stat opp-color)))))
              (/ (get node (agg-stat color))
-                (get node (agg-stat opp-color))))))
+                (get node (agg-stat opp-color)))))
+          >)
          ffirst)))
 
 
@@ -523,6 +524,8 @@
                   (conj {:action :responses
                          :ucis   ucis
                          :depth  0}))]
+
+    (log/info "Pruned tree to " ucis)
 
     (-> opts
         (assoc :tree tree)
@@ -656,11 +659,10 @@
             (peek stack)
 
             _ (when true
-                    (println "stack")
-                    (println stack)
-                    #_#_
-                    (println "tree")
-                    (println tree))
+                (log/info (take 5 stack))
+                #_#_
+                (println "tree")
+                (println tree))
 
             opts (-> opts
                      (update :stack pop)
