@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]))
 
 (defn whose-turn? [moves]
-  (if (= 0 (mod (count moves) 2))
+  (if (zero? (mod (count moves) 2))
     :white
     :black))
 

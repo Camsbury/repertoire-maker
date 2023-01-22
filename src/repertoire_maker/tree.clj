@@ -381,7 +381,7 @@
              h/moves->candidates
              (filter #(< min-resp-prob (:prob %)))
              (filter #(or
-                       (not= 0 depth)
+                       (not (zero? depth))
                        (< min-prob-agg (* prob-agg (:prob %)))))
              (map (fn [move]
                     (merge move
@@ -435,15 +435,23 @@
     (->> children
          (sort-by
           (fn [[_ node]]
-            (or
-             (some->
-              (get node (agg-stat (m-stat color)))
-              (/ (get node (agg-stat (m-stat opp-color)))))
-             (/ (get node (agg-stat color))
-                (get node (agg-stat opp-color)))))
+            (let [my-m-stat  (get node (agg-stat (m-stat color)))
+                  opp-m-stat (get node (agg-stat (m-stat opp-color)))
+                  my-stat    (get node (agg-stat color))
+                  opp-stat   (get node (agg-stat opp-color))]
+              (or
+               (when (and (some? my-m-stat)
+                          (some? opp-m-stat)
+                          (not (zero?  opp-m-stat)))
+                 (/ my-m-stat opp-m-stat))
+
+               (if (and (some? my-stat)
+                          (some? opp-stat)
+                          (not (zero? opp-stat)))
+                 (/ my-stat opp-stat)
+                 0.0))))
           >)
          ffirst)))
-
 
 (def alternate-stats
   {:calc-stats  :trans-stats
@@ -603,8 +611,8 @@
   [stat children]
   (->> children
        (map second)
-       (map #(* (or (get % stat) 0)
-                (or ((prob-attr stat) %) 0)))
+       (map #(* (or (get % stat) 0.0)
+                (or ((prob-attr stat) %) 0.0)))
        (reduce +)))
 
 (defn do-calc-stats
@@ -614,7 +622,7 @@
       (let [nominal (get node stat)
             prob-non-child
             (->> children
-                 (map #(or (get-in % [1 (prob-attr stat)]) 0))
+                 (map #(or (get-in % [1 (prob-attr stat)]) 0.0))
                  (reduce +)
                  (- 1))
             children-nominal (when (not= stat :score)
@@ -711,8 +719,8 @@
 
   (repertoire-maker.core/build-repertoire
    {:allowable-loss 0.05
-    :color          :white
-    :min-prob-agg   0.01
+    :color          :black
+    :min-prob-agg   0.003
     :min-resp-prob  0.1
     :min-cand-prob  0.05
     :use-engine?    true
