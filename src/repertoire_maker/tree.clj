@@ -619,28 +619,31 @@
   [tree ucis]
   (let [children (resp-in-tree tree ucis)]
     (fn [node stat]
-      (let [nominal (get node stat)
-            prob-non-child
-            (->> children
-                 (map #(or (get-in % [1 (prob-attr stat)]) 0.0))
-                 (reduce +)
-                 (- 1))
-            children-nominal (when (not= stat :score)
-                               (children-total stat children))
-            children-aggregate (children-total (agg-stat stat) children)
+      ;; keep stats the same if no children
+      (if (seq children)
+        (let [nominal (get node stat)
+              prob-non-child
+              (->> children
+                   (map #(or (get-in % [1 (prob-attr stat)]) 0.0))
+                   (reduce +)
+                   (- 1))
+              children-nominal (when (not= stat :score)
+                                 (children-total stat children))
+              children-aggregate (children-total (agg-stat stat) children)
 
-            calced
-            (when (and (some? nominal)
-                       (some? prob-non-child)
-                       (some? children-nominal)
-                       (some? children-aggregate))
-              (+
-               (if (= stat :score)
-                 (* prob-non-child nominal)
-                 (- nominal children-nominal))
-               children-aggregate))]
+              calced
+              (when (and (some? nominal)
+                         (some? prob-non-child)
+                         (some? children-nominal)
+                         (some? children-aggregate))
+                (+
+                 (if (= stat :score)
+                   (* prob-non-child nominal)
+                   (- nominal children-nominal))
+                 children-aggregate))]
 
-        (assoc node (agg-stat stat) calced)))))
+          (assoc node (agg-stat stat) calced))
+        node))))
 
 (defn calc-stats
   "weight parent stats based on children"
