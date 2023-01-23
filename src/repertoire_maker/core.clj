@@ -51,17 +51,17 @@
        :score))
 
 (defn init-move-eval
-  [{:keys [color ucis node prob-agg masters?] :as opts}]
+  [{:keys [color ucis uci prob-agg masters?] :as opts}]
   (let [move-eval
         (->> (assoc opts :group :lichess)
              h/historic-moves
-             (filter #(= node (:uci %)))
+             (filter #(= uci (:uci %)))
              first)
 
         masters-eval (when masters?
                        (->> (assoc opts :group :masters)
                             h/historic-moves
-                            (filter #(= node (:uci %)))
+                            (filter #(= uci (:uci %)))
                             first))
 
         move-eval (-> move-eval
@@ -75,7 +75,7 @@
 
     (-> move-eval
         (merge
-         {:ucis    (conj ucis node)
+         {:ucis    (conj ucis uci)
           :score    (init-score opts)
           :prob-agg prob-agg}))))
 
@@ -103,15 +103,14 @@
            {:action :calc-stats
             :ucis   ucis}))
 
-        ;; FIXME: outer node has metadata, inner node is UCI
         node
         (reduce
-         (fn [{:keys [prob-agg ucis]} node]
+         (fn [{:keys [prob-agg ucis]} uci]
            (-> opts
                (merge
-                {:ucis    ucis
+                {:ucis     ucis
                  :prob-agg prob-agg
-                 :node     node})
+                 :uci      uci})
                init-move-eval))
          (base-node color)
          ucis)]
