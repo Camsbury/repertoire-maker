@@ -2,36 +2,12 @@
   (:require
    [python-base]
    [libpython-clj2.python :refer [py. py.-] :as py]
-   [libpython-clj2.require :refer [require-python]]))
+   [libpython-clj2.require :refer [require-python]]
+   [repertoire-maker.util.tree :as tutil]))
 
 (require-python
  '[chess     :as chess]
  '[chess.pgn :as pgn])
-
-(defn resp-in-tree
-  "Get a branch in the tree by uci"
-  [tree ucis]
-  (if (seq ucis)
-    (get-in
-     tree
-     (-> :responses
-         (interpose ucis)
-         (conj :responses)
-         vec
-         (conj :responses)))
-    (get tree :responses)))
-
-(defn get-in-tree
-  "Get a branch in the tree by uci"
-  [tree ucis]
-  (if (seq ucis)
-    (get-in
-     tree
-     (-> :responses
-         (interpose ucis)
-         (conj :responses)
-         vec))
-    tree))
 
 (defn export-repertoire
   ([move-tree]
@@ -53,7 +29,7 @@
                                   (py. (last nodes) "add_variation")
                                   (conj nodes))
                next          (->> moves
-                                  (resp-in-tree move-tree)
+                                  (tutil/resp-in-tree move-tree)
                                   (remove #(:trim? (second %)))
                                   keys
                                   reverse)

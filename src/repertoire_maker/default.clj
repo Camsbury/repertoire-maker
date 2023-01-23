@@ -3,7 +3,7 @@
 (def defaults
   {:algo
    {:filter-pct        0.01
-    :min-prob-agg          0.01
+    :min-prob-agg      0.01
     :min-resp-prob     0.01
     :min-cand-prob     0.01
     :min-plays         100

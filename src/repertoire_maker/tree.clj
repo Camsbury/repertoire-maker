@@ -6,6 +6,7 @@
    [repertoire-maker.history :as h]
    [repertoire-maker.util.core :as util]
    [repertoire-maker.util.notation :as not]
+   [repertoire-maker.util.tree :as t]
    [repertoire-maker.default :refer [defaults]]
    [flatland.ordered.map :refer [ordered-map]]))
 
@@ -25,85 +26,6 @@
      :prob-m   1.0
      :prob-agg 1.0
      :ucis     []}))
-
-(defn get-leaves
-  "get all the leaf nodes of the tree"
-  [tree]
-  (->> tree
-       :responses
-       (mapcat
-        (fn [[_ {:keys [responses] :as node}]]
-          (if (seq responses)
-            (get-leaves responses)
-            [node])))))
-
-(defn get-in-tree
-  "Get a branch in the tree by uci"
-  [tree ucis]
-  (if (seq ucis)
-    (get-in
-     tree
-     (-> :responses
-         (interpose ucis)
-         (conj :responses)
-         vec))
-    tree))
-
-(defn resp-in-tree
-  "Get a branch in the tree by uci"
-  [tree ucis]
-  (if (seq ucis)
-    (get-in
-     tree
-     (-> :responses
-         (interpose ucis)
-         (conj :responses)
-         vec
-         (conj :responses)))
-    (get tree :responses)))
-
-(defn dissoc-in-tree
-  [tree ucis]
-  (let [base (drop-last ucis)
-        tip  (last ucis)]
-    (if (seq base)
-      (update-in
-       tree
-       (-> :responses
-           (interpose base)
-           (conj :responses)
-           vec
-           (conj :responses))
-       #(dissoc % tip))
-      (update tree :responses #(dissoc % tip)))))
-
-(defn assoc-tree-branch
-  "Insert a branch into the move tree"
-  ([node]
-   (assoc-tree-branch nil node))
-  ([tree {:keys [ucis stack] :as node}]
-   (let [stack (or stack ucis)
-         tree (or tree {:responses (ordered-map)})
-         node (-> node
-                  (assoc :stack stack)
-                  (update :responses #(or % (ordered-map))))]
-     (cond
-       (empty? ucis)
-       (-> node
-           (dissoc :stack)
-           (merge tree))
-
-       (= 1 (count stack))
-       (assoc-in tree [:responses (first stack)] (dissoc node :stack))
-
-       (seq stack)
-       (update-in
-        tree
-        [:responses (first stack)]
-        #(assoc-tree-branch % (update node :stack rest)))
-
-       :else
-       tree))))
 
 (defn- overrides->uci
   [overrides]
@@ -195,7 +117,7 @@
     (merge
      opts
      {:stack stack
-      :tree  (assoc-tree-branch node)})))
+      :tree  (t/assoc-tree-branch node)})))
 
 (defn- extract-filtered-moves
   [opts candidates]
@@ -284,7 +206,7 @@
 
   (let [{:keys [ucis depth]} step
         depth                (inc depth)
-        {:keys [prob-agg]}   (get-in-tree tree ucis)
+        {:keys [prob-agg]}   (t/get-in-tree tree ucis)
         opts                 (assoc opts :moves ucis)
         engine-candidates    (ngn/prepare-engine-candidates opts)
         engine-filter        (filter-engine opts engine-candidates)
@@ -343,7 +265,7 @@
         tree (->> candidates
                   ;; init agg stats to the same as the nominal stats
                   (map init-agg-stats)
-                  (reduce assoc-tree-branch tree))
+                  (reduce t/assoc-tree-branch tree))
 
         stack (if (< depth search-depth)
                 (->> candidates
@@ -369,7 +291,7 @@
            min-prob-agg (get-in defaults [:algo :min-prob-agg])}
     :as opts}]
   (let [{:keys [ucis depth]} step
-        {:keys [prob-agg]} (get-in-tree tree ucis)
+        {:keys [prob-agg]} (t/get-in-tree tree ucis)
 
         masters-responses
         (prepare-masters-candidates opts)
@@ -390,7 +312,7 @@
                             :prob-agg (* prob-agg (:prob move))}))))
 
 
-        tree (reduce assoc-tree-branch tree responses)
+        tree (reduce t/assoc-tree-branch tree responses)
 
         stack (->> responses
                    reverse ; prioritize the most common responses
@@ -486,7 +408,7 @@
           _ (log/info "creating prune hooks for " ucis)
           viable-responses
           (->> ucis
-               (get-in-tree tree)
+               (t/get-in-tree tree)
                :responses
                (filter #(< min-prob-agg (:prob-agg (second %))))
                ;; push the most common last
@@ -494,12 +416,12 @@
 
           nonviable-responses
           (->> ucis
-               (get-in-tree tree)
+               (t/get-in-tree tree)
                :responses
                (remove #(< min-prob-agg (:prob-agg (second %)))))
 
           tree (reduce
-                (fn [t [_ n]] (assoc-tree-branch t (assoc n :trim? true)))
+                (fn [t [_ n]] (t/assoc-tree-branch t (assoc n :trim? true)))
                 tree
                 nonviable-responses)]
     (merge
@@ -511,7 +433,7 @@
   [{:keys [step tree stack] :as opts}]
   (let [{:keys [ucis]} step
 
-        node       (get-in-tree tree ucis)
+        node       (t/get-in-tree tree ucis)
         children   (:responses node)
 
         #_#_
@@ -525,7 +447,7 @@
         tree (->> children
                   (remove #(= (first %) choice-uci))
                   (map #(:ucis (second %)))
-                  (reduce dissoc-in-tree tree))
+                  (reduce t/dissoc-in-tree tree))
 
         ucis (conj ucis choice-uci)
 
@@ -549,7 +471,7 @@
     :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])}
     :as opts}]
   (let [{:keys [ucis]} step
-        {:keys [prob-agg]} (get-in-tree tree ucis)
+        {:keys [prob-agg]} (t/get-in-tree tree ucis)
 
         masters-responses
         (prepare-masters-candidates opts)
@@ -566,7 +488,7 @@
                             :prob-m (:prob (get-candidate masters-responses move))
                             :prob-agg (* prob-agg (:prob move))}))))
 
-        tree (reduce assoc-tree-branch tree responses)
+        tree (reduce t/assoc-tree-branch tree responses)
 
         ;; for each response
         ;; Candidates -> Prune -> TransStat -> stack
@@ -592,14 +514,14 @@
   "bubble best child stat up to parent"
   [{:keys [step tree] :as opts}]
   (let [{:keys [ucis]} step
-        node (get-in-tree tree ucis)
+        node (t/get-in-tree tree ucis)
         children (:responses node)
         choice-uci (apply-strategy (assoc opts :children children))]
     (->> [:white :black :score :white-m :black-m]
          (map agg-stat)
          (select-keys (get children choice-uci))
          (merge node)
-         (update opts :tree assoc-tree-branch))))
+         (update opts :tree t/assoc-tree-branch))))
 
 (defn- prob-attr
   [stat]
@@ -617,7 +539,7 @@
 
 (defn do-calc-stats
   [tree ucis]
-  (let [children (resp-in-tree tree ucis)]
+  (let [children (t/resp-in-tree tree ucis)]
     (fn [node stat]
       ;; keep stats the same if no children
       (if (seq children)
@@ -653,10 +575,10 @@
         node
         (reduce
          (do-calc-stats tree ucis)
-         (get-in-tree tree ucis)
+         (t/get-in-tree tree ucis)
          [:white :black :white-m :black-m :score])]
 
-    (update opts :tree assoc-tree-branch node)))
+    (update opts :tree t/assoc-tree-branch node)))
 
 (defn build-tree
   [opts]
@@ -706,31 +628,32 @@
            (create-prune-hooks opts)))))))
 
 (comment
-
-  (build-tree
-   {:allowable-loss 0.05
-    :color          :white
-    :min-prob-agg   0.1
-    :min-cand-prob  0.01
-    :use-engine?    true
-    :log-stats?     true
-    :export?        true
-    :strategy       :min-loss
-    :search-depth   1
-    :moves          []
-    :masters?       true})
+  (def tree *3)
 
   (repertoire-maker.core/build-repertoire
    {:allowable-loss 0.05
-    :color          :black
-    :min-prob-agg   0.003
-    :min-resp-prob  0.1
+    :color          :white
+    :moves          ["e4"]
+    :min-prob-agg   0.01
+    :min-resp-prob  0.05
     :min-cand-prob  0.05
     :use-engine?    true
     :export?        true
     :strategy       :max-win-over-loss
-    :search-depth   3
+    :search-depth   1
     :masters?       true})
+
+  (repertoire-maker.core/build-repertoire
+   {:allowable-loss 0.05
+    :color          :white
+    :moves          ["e4"]
+    :min-prob-agg   0.1
+    :min-resp-prob  0.01
+    :min-cand-prob  0.01
+    :use-engine?    true
+    :export?        true
+    :strategy       :max-win-over-loss
+    :search-depth   4})
 
 
 

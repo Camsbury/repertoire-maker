@@ -20,12 +20,3 @@
     (is (close-to black-win-pct (:black processed)))
     (is (close-to total-moves (:play-count processed)))
     (is (close-to (double (/ total-moves prior-total)) (:play-pct processed)))))
-
-;; TODO: Add API fixtures to test this
-;; (deftest initialize-moveset-test
-
-;; (sut/initialize-moveset
-;;  {:moves ["e2e4"]
-;;   :color :white
-;;   :local? true})
-;;   )

@@ -3,6 +3,7 @@
    [taoensso.timbre :as log]
    [repertoire-maker.tree :as sut]
    [repertoire-maker.util.test :refer [close-to]]
+   [repertoire-maker.util.tree :as tutil]
    [flatland.ordered.map :refer [ordered-map]]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -109,7 +110,7 @@
                      sut/starting-state)]
 
          (is (= stack (:stack res)))
-         (is (= node (sut/get-in-tree (:tree res) ["e2e4" "c7c5"]))))
+         (is (= node (tutil/get-in-tree (:tree res) ["e2e4" "c7c5"]))))
 
        (let [stack
              (list
@@ -132,7 +133,7 @@
                      sut/starting-state)]
 
          (is (= stack (:stack res)))
-         (is (= node (sut/get-in-tree (:tree res) ["e2e4" "c7c5"]))))
+         (is (= node (tutil/get-in-tree (:tree res) ["e2e4" "c7c5"]))))
 
        (let [stack
              (list
@@ -155,7 +156,7 @@
                      sut/starting-state)]
 
          (is (= stack (:stack res)))
-         (is (= node (sut/get-in-tree (:tree res) ["e2e4"]))))
+         (is (= node (tutil/get-in-tree (:tree res) ["e2e4"]))))
 
        (let [stack
              (list
@@ -181,7 +182,7 @@
                      sut/starting-state)]
 
          (is (= stack (:stack res)))
-         (is (= node (sut/get-in-tree (:tree res) ["e2e4"])))))))
+         (is (= node (tutil/get-in-tree (:tree res) ["e2e4"])))))))
 
 #_#_#_#_#_#_#_#_#_
 
