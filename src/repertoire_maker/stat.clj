@@ -2,6 +2,10 @@
   (:require
    [taoensso.timbre :as log]))
 
+(defn agg-stat
+  [stat]
+  (keyword (str (name stat) "-agg")))
+
 (defn calc-depths
   [depth move-tree]
   (->> move-tree

@@ -1,9 +1,144 @@
 (ns repertoire-maker.core
   (:require
    [taoensso.timbre :as log]
+   [repertoire-maker.action.core :refer [run-action]]
+   [repertoire-maker.engine :as ngn]
+   [repertoire-maker.history :as h]
+   [repertoire-maker.util.core :as util]
+   [repertoire-maker.util.notation :as not]
+   [repertoire-maker.util.tree :as t]
    [repertoire-maker.export :as export]
-   [repertoire-maker.stat :as stat]
-   [repertoire-maker.tree :as tree]))
+   [repertoire-maker.stat :as stat]))
+
+(defn base-node
+  "Numbers based on lichess and engine cache"
+  [color]
+  (let [score
+        (if (= :white color)
+          0.531
+          0.484)]
+    {:white-m  0.33
+     :black-m  0.24
+     :white    0.49
+     :black    0.45
+     :score    score
+     :prob     1.0
+     :prob-m   1.0
+     :prob-agg 1.0
+     :ucis     []}))
+
+(defn- overrides->uci
+  [overrides]
+  (->> overrides
+       (map
+        (fn [[base tip]]
+          (let [ucis (not/sans->ucis (conj base tip))
+                base (into [] (drop-last ucis))
+                tip (last ucis)]
+            [base tip])))
+       (into {})))
+
+(defn init-score
+  [{:keys [ucis node] :as opts}]
+  (->> (assoc opts :moves ucis)
+       ngn/prepare-engine-candidates
+       (filter #(= node (:uci %)))
+       first
+       :score))
+
+(defn init-move-eval
+  [{:keys [color ucis node prob-agg masters?] :as opts}]
+  (let [opts (assoc opts :moves ucis)
+
+        move-eval
+        (->> (assoc opts :group :lichess)
+             h/moves->candidates
+             (filter #(= node (:uci %)))
+             first)
+
+        masters-eval (when masters?
+                       (->> (assoc opts :group :masters)
+                            h/moves->candidates
+                            (filter #(= node (:uci %)))
+                            first))
+
+        move-eval (-> move-eval
+                      (assoc :white-m (:white masters-eval))
+                      (assoc :black-m (:black masters-eval))
+                      (assoc :prob-m  (:prob  masters-eval)))
+
+        prob-agg (cond-> prob-agg
+                   (not (util/my-turn? color ucis))
+                   (* (:prob move-eval)))]
+
+    (-> move-eval
+        (merge
+         {:ucis    (conj ucis node)
+          :score    (init-score opts)
+          :prob-agg prob-agg}))))
+
+(defn starting-state
+  [{:keys [moves] :as opts}]
+  (let [{:keys [ucis color] :as opts}
+        (-> opts
+            (assoc  :ucis (not/sans->ucis moves))
+            (update :overrides overrides->uci)
+            (dissoc :moves))
+
+        stack
+        (if (util/my-turn? color ucis)
+          (list
+           {:action :candidates
+            :ucis   ucis
+            :depth  0}
+           {:action :prune
+            :ucis   ucis}
+           {:action :trans-stats
+            :ucis   ucis})
+          (list
+           {:action :init-responses
+            :ucis   ucis}
+           {:action :calc-stats
+            :ucis   ucis}))
+
+        ;; FIXME: outer node has metadata, inner node is UCI
+        node
+        (reduce
+         (fn [{:keys [prob-agg ucis]} node]
+           (-> opts
+               (merge
+                {:ucis    ucis
+                 :prob-agg prob-agg
+                 :node     node})
+               init-move-eval))
+         (base-node color)
+         ucis)]
+
+    (merge
+     opts
+     {:stack stack
+      :tree  (t/assoc-tree-branch node)})))
+
+(defn build-tree
+  [opts]
+  (loop [{:keys [stack tree] :as opts} (starting-state opts)]
+    (if (empty? stack)
+      tree
+      (let [{:keys [action] :as step}
+            (peek stack)
+
+            #_#_
+            _ (when true
+                ;; (log/info (take 5 stack))
+                (log/info "step: " step)
+                (println "tree")
+                (println tree))
+
+            opts (-> opts
+                     (update :stack pop)
+                     (assoc  :step  step)
+                     (assoc  :action action))]
+        (recur (run-action opts))))))
 
 (defn build-repertoire
   "Build a tree of moves and their attributes corresponding to
@@ -11,29 +146,22 @@
 
   Conditionally runs stats and exports as PGN"
   [{:keys [log-stats? export? export-path] :as opts}]
-  (let [move-tree
-        (tree/build-tree opts)
-        #_
-        (loop [opts (init-opts opts)]
-          (if (empty? (:movesets opts))
-            (:tree opts)
-            (recur (build-step opts))))]
-    (cond-> move-tree
-      log-stats?
-      stat/log-stats
-      export?
-      (export/export-repertoire export-path))))
+  (cond-> (build-tree opts)
+    log-stats?
+    stat/log-stats
+    export?
+    (export/export-repertoire export-path)))
 
 (comment
-
   (build-repertoire
-   {:allowable-loss  0.05
-    :color           :white
-    :min-prob-agg        0.1
-    :min-cand-prob 0.01
-    :use-engine?     true
-    :export?         true
-    :strategy        :max-win-over-loss
-    :search-depth    2
-    :masters?        true})
-  )
+   {:allowable-loss 0.05
+    :color          :white
+    :moves          ["e4"]
+    :min-prob-agg   0.01
+    :min-resp-prob  0.05
+    :min-cand-prob  0.05
+    :use-engine?    true
+    :export?        true
+    :strategy       :max-win-over-loss
+    :search-depth   1
+    :masters?       true}))
