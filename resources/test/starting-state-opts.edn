@@ -1,63 +1,69 @@
 {:ss-opts-white-empty
- {:allowable-loss  0.05
-  :color           :white
-  :filter-pct      0.01
-  :min-cand-prob 0.01
-  :use-engine?     true
-  :log-stats?      true
-  :export?         true
-  :masters?        true}
+ {:allowable-loss 0.05
+  :color          :white
+  :min-prob-agg   0.01
+  :min-cand-prob  0.01
+  :min-resp-prob  0.01
+  :use-engine?    true
+  :log-stats?     true
+  :export?        true
+  :masters?       true}
 
  :ss-opts-black-empty
- {:allowable-loss  0.05
-  :color           :black
-  :filter-pct      0.01
-  :min-cand-prob 0.01
-  :use-engine?     true
-  :log-stats?      true
-  :export?         true
-  :masters?        true}
+ {:allowable-loss 0.05
+  :color          :black
+  :min-prob-agg   0.01
+  :min-cand-prob  0.01
+  :min-resp-prob  0.01
+  :use-engine?    true
+  :log-stats?     true
+  :export?        true
+  :masters?       true}
 
  :ss-opts-white-white
- {:allowable-loss  0.05
-  :color           :white
-  :filter-pct      0.01
-  :min-cand-prob 0.01
-  :moves           ["e4" "c5"]
-  :use-engine?     true
-  :log-stats?      true
-  :export?         true
-  :masters?        true}
+ {:allowable-loss 0.05
+  :color          :white
+  :min-prob-agg   0.01
+  :min-cand-prob  0.01
+  :min-resp-prob  0.01
+  :moves          ["e4" "c5"]
+  :use-engine?    true
+  :log-stats?     true
+  :export?        true
+  :masters?       true}
 
  :ss-opts-white-black
- {:allowable-loss  0.05
-  :color           :white
-  :filter-pct      0.01
-  :min-cand-prob 0.01
-  :moves            ["e4"]
-  :use-engine?     true
-  :log-stats?      true
-  :export?         true
-  :masters?        true}
+ {:allowable-loss 0.05
+  :color          :white
+  :min-prob-agg   0.01
+  :min-cand-prob  0.01
+  :min-resp-prob  0.01
+  :moves          ["e4"]
+  :use-engine?    true
+  :log-stats?     true
+  :export?        true
+  :masters?       true}
 
  :ss-opts-black-white
- {:allowable-loss  0.05
-  :color           :black
-  :filter-pct      0.01
-  :min-cand-prob 0.01
-  :moves           ["e4" "c5"]
-  :use-engine?     true
-  :log-stats?      true
-  :export?         true
-  :masters?        true}
+ {:allowable-loss 0.05
+  :color          :black
+  :min-prob-agg   0.01
+  :min-cand-prob  0.01
+  :min-resp-prob  0.01
+  :moves          ["e4" "c5"]
+  :use-engine?    true
+  :log-stats?     true
+  :export?        true
+  :masters?       true}
 
  :ss-opts-black-black
- {:allowable-loss  0.05
-  :color           :black
-  :filter-pct      0.01
-  :min-cand-prob 0.01
-  :moves            ["e4"]
-  :use-engine?     true
-  :log-stats?      true
-  :export?         true
-  :masters?        true}}
+ {:allowable-loss 0.05
+  :color          :black
+  :min-prob-agg   0.01
+  :min-cand-prob  0.01
+  :min-resp-prob  0.01
+  :moves          ["e4"]
+  :use-engine?    true
+  :log-stats?     true
+  :export?        true
+  :masters?       true}}

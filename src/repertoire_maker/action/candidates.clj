@@ -1,21 +1,30 @@
 (ns repertoire-maker.action.candidates
   (:require
+   [malli.core :as m]
    [repertoire-maker.candidate :refer [get-candidate prepare-masters-candidates]]
    [repertoire-maker.stat :refer [agg-stat]]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.history :as h]
+   [repertoire-maker.schema :as schema]
    [repertoire-maker.tree :as t]))
 
 (defn- extract-filtered-moves
-  [opts candidates]
+  [{:keys [allowable-loss]} candidates]
   (let [best-score (->> candidates first :score)
-        allowable-loss (or (:allowable-loss opts)
+        allowable-loss (or allowable-loss
                            (get-in defaults [:engine :allowable-loss]))]
     (->> candidates
          (filter #(< allowable-loss (/ (:score %) best-score)))
          (mapv :uci))))
+(m/=>
+ extract-filtered-moves
+ [:=>
+  [:cat
+   schema/config-opts
+   [:sequential schema/move-node]]
+  [:sequential schema/move-node]])
 
 (defn- filter-engine
   [opts engine-candidates]
@@ -29,6 +38,16 @@
        #(contains? (set engine-candidates) (:uci %))
        move-candidates)
       move-candidates)))
+(m/=>
+ filter-engine
+ [:=>
+  [:cat
+   schema/config-opts
+   [:sequential schema/move-node]]
+  [:=>
+   [:cat
+    [:sequential schema/move-node]]
+   [:sequential schema/move-node]]])
 
 (defn- prepare-player-move
   [{:keys [player] :as opts} engine-filter]
@@ -38,6 +57,17 @@
              engine-filter
              first
              :uci)))
+(m/=>
+ prepare-player-move
+ [:=>
+  [:cat
+   schema/config-opts
+   [:=>
+    [:cat
+     [:sequential schema/move-node]]
+    [:sequential schema/move-node]]]
+  [:maybe schema/uci]])
+
 
 (defn- init-agg-stats
   [node]
@@ -47,9 +77,14 @@
        (assoc node (agg-stat stat) (get node stat)))
      node
      stats)))
+(m/=>
+ init-agg-stats
+ [:=>
+  [:cat schema/move-node]
+  schema/move-node])
 
-;; Enumerate all move candidates
-(defmethod run-action :candidates
+(defn enumerate-candidates
+  "Enumerate candidates for a given move sequence"
   [{:keys [min-plays
            min-cand-prob
            overrides
@@ -57,11 +92,10 @@
            stack
            step
            tree]
-    :or   {min-plays       (get-in defaults [:algo :min-plays])
+    :or   {min-plays     (get-in defaults [:algo :min-plays])
            min-cand-prob (get-in defaults [:algo :min-cand-prob])
-           search-depth    (get-in defaults [:algo :search-depth])}
+           search-depth  (get-in defaults [:algo :search-depth])}
     :as   opts}]
-
   (let [{:keys [ucis depth]} step
         depth                (inc depth)
         {:keys [prob-agg]}   (t/get-in-tree tree ucis)
@@ -71,11 +105,11 @@
         player-move          (prepare-player-move opts engine-filter)
         overridden-move      (get overrides ucis)
 
-        lichess-candidates   (delay (-> opts
+        lichess-candidates (delay (-> opts
                                         (assoc :group :lichess)
                                         h/historic-moves))
-        masters-candidates   (prepare-masters-candidates opts)
-        candidates           (or masters-candidates
+        masters-candidates (prepare-masters-candidates opts)
+        candidates         (or masters-candidates
                                  @lichess-candidates)
         candidates
         (cond
@@ -138,7 +172,20 @@
                                    :depth  depth})))
                       stack))
                 stack)]
+  (-> opts
+      (assoc :tree tree)
+      (assoc :stack stack))))
+(m/=>
+ enumerate-candidates
+ [:=>
+  [:cat
+   [:and
+    schema/build-tree-opts
+    schema/config-opts
+    [:map [:step schema/build-step]]]]
+  schema/build-tree-opts])
 
-    (-> opts
-        (assoc :tree tree)
-        (assoc :stack stack))))
+;; Enumerate all move candidates
+(defmethod run-action :candidates
+  [opts]
+  (enumerate-candidates opts))

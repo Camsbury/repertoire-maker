@@ -16,6 +16,7 @@
          com.github.luben/zstd-jni           {:mvn/version "1.5.2-5"}
          environ/environ                     {:mvn/version "1.2.0"}
          lambdaisland/kaocha                 {:mvn/version "1.72.1136"}
+         metosin/malli                       {:mvn/version "0.10.1"}
          org.flatland/ordered                {:mvn/version "1.15.10"}
          potemkin/potemkin                   {:mvn/version "0.4.6"}
          slingshot/slingshot                 {:mvn/version "0.12.2"}

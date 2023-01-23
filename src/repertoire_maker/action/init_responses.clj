@@ -1,12 +1,15 @@
 (ns repertoire-maker.action.init-responses
   (:require
+   [malli.core :as m]
    [repertoire-maker.candidate :refer [get-candidate prepare-masters-candidates]]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.history :as h]
+   [repertoire-maker.schema :as schema]
    [repertoire-maker.tree :as t]))
 
-(defmethod run-action :init-responses
+(defn init-responses
+  "Kicks off the tree builder by grabbing initial opponent responses"
   [{:keys [min-resp-prob step tree stack]
     :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])}
     :as opts}]
@@ -47,3 +50,16 @@
     (-> opts
         (assoc :tree tree)
         (assoc :stack stack))))
+(m/=>
+ enumerate-candidates
+ [:=>
+  [:cat
+   [:and
+    schema/build-tree-opts
+    schema/config-opts
+    [:map [:step schema/build-step]]]]
+  schema/build-tree-opts])
+
+(defmethod run-action :init-responses
+  [opts]
+  (init-responses opts))

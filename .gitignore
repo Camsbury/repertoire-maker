@@ -1,6 +1,7 @@
 *.cpcache/
 *.~undo-tree~
 *scratch.clj
+.clj-kondo/metosin/
 .envrc
 .nrepl-port
 todo.org

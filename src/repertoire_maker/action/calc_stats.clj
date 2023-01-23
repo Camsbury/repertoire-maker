@@ -1,5 +1,8 @@
 (ns repertoire-maker.action.calc-stats
   (:require
+   [malli.core :as m]
+   [malli.clj-kondo :as mc]
+   [repertoire-maker.schema :as schema]
    [repertoire-maker.stat :refer [agg-stat]]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.tree :as t]))
@@ -9,6 +12,7 @@
   (if (#{:white-m :black-m} stat)
     :prob-m
     :prob))
+(m/=> prob-attr [:=> [:cat schema/non-agg-stat] schema/prob])
 
 (defn- children-total
   [stat children]
@@ -17,6 +21,7 @@
        (map #(* (or (get % stat) 0.0)
                 (or ((prob-attr stat) %) 0.0)))
        (reduce +)))
+(m/=> children-total [:=> [:cat schema/stat schema/responses] :double])
 
 (defn do-calc-stats
   [tree ucis]
@@ -47,9 +52,14 @@
 
           (assoc node (agg-stat stat) calced))
         node))))
+(m/=>
+ do-calc-stats
+ [:=>
+  [:cat schema/move-tree [:sequential schema/uci]]
+  [:=> [:cat schema/move-tree schema/stat] schema/move-tree]])
 
-;; weight parent stats based on children
-(defmethod run-action :calc-stats
+(defn calc-stats
+  "Weight parent stats based on children"
   [{:keys [step tree] :as opts}]
   (let [{:keys [ucis]} step
 
@@ -58,5 +68,17 @@
          (do-calc-stats tree ucis)
          (t/get-in-tree tree ucis)
          [:white :black :white-m :black-m :score])]
-
     (update opts :tree t/assoc-tree-branch node)))
+(m/=>
+ calc-stats
+ [:=>
+  [:cat
+   schema/build-tree-opts]
+  schema/build-tree-opts])
+
+(defmethod run-action :calc-stats
+  [opts]
+  (calc-stats opts))
+
+;; NOTE: needed?
+(-> (mc/collect *ns*) (mc/linter-config))

@@ -158,8 +158,8 @@
   (build-repertoire
    {:allowable-loss 0.05
     :color          :white
-    :moves          ["e4"]
-    :min-prob-agg   0.01
+    ;; :moves          ["e4"]
+    :min-prob-agg   0.1
     :min-resp-prob  0.05
     :min-cand-prob  0.05
     :use-engine?    true
