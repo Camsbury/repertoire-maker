@@ -6,8 +6,7 @@
    [repertoire-maker.history :as h]
    [repertoire-maker.notation :as not]
    [repertoire-maker.tree :as t]
-   [repertoire-maker.export :as export]
-   [repertoire-maker.stat :as stat]))
+   [repertoire-maker.export :as export]))
 
 (defn- my-turn? [color moves]
   (= color
@@ -44,8 +43,8 @@
        (into {})))
 
 (defn init-score
-  [{:keys [ucis node] :as opts}]
-  (->> (assoc opts :moves ucis)
+  [{:keys [node] :as opts}]
+  (->> opts
        ngn/prepare-engine-candidates
        (filter #(= node (:uci %)))
        first
@@ -53,17 +52,15 @@
 
 (defn init-move-eval
   [{:keys [color ucis node prob-agg masters?] :as opts}]
-  (let [opts (assoc opts :moves ucis)
-
-        move-eval
+  (let [move-eval
         (->> (assoc opts :group :lichess)
-             h/moves->candidates
+             h/historic-moves
              (filter #(= node (:uci %)))
              first)
 
         masters-eval (when masters?
                        (->> (assoc opts :group :masters)
-                            h/moves->candidates
+                            h/historic-moves
                             (filter #(= node (:uci %)))
                             first))
 

@@ -16,14 +16,14 @@
   (let [{:keys [ucis depth]} step
         {:keys [prob-agg]} (t/get-in-tree tree ucis)
 
+        opts (assoc opts :ucis ucis)
+
         masters-responses
         (prepare-masters-candidates opts)
 
         responses
-        (->> (-> opts
-                 (assoc :group :lichess)
-                 (assoc :moves ucis))
-             h/moves->candidates
+        (->> (assoc opts :group :lichess)
+             h/historic-moves
              (filter #(< min-resp-prob (:prob %)))
              (filter #(or
                        (not (zero? depth))

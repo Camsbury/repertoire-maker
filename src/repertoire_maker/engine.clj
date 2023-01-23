@@ -1,6 +1,7 @@
 (ns repertoire-maker.engine
   (:require
    [python-base]
+   [taoensso.timbre :as log]
    [environ.core :refer [env]]
    [clojure.string :as str]
    [repertoire-maker.notation :as not]
@@ -68,20 +69,19 @@
     moves))
 
 
-;; TODO: update moves to ucis after one big loop completion
 (defn prepare-engine-candidates
-  [{:keys [use-engine? move-count moves color] :as opts}]
+  [{:keys [use-engine? move-count ucis color] :as opts}]
   (when use-engine?
     (let [opts (-> defaults :engine (merge opts))
 
           {:keys [depth candidates]}
-          (some-> {:fen     (not/ucis->fen moves)
+          (some-> {:fen     (not/ucis->fen ucis)
                    :color   color
                    :breadth move-count}
                   cloud-eval/fen->cloud-eval
                   (merge
                    (cloud-eval/fen->cloud-eval
-                    {:fen   (not/ucis->fen moves)
+                    {:fen   (not/ucis->fen ucis)
                      :color color})))]
 
       (if (some-> depth

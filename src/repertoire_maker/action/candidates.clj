@@ -34,7 +34,7 @@
   [{:keys [player] :as opts} engine-filter]
   (when player
     (some->> (assoc opts :group :player)
-             h/moves->candidates
+             h/historic-moves
              engine-filter
              first
              :uci)))
@@ -65,14 +65,15 @@
   (let [{:keys [ucis depth]} step
         depth                (inc depth)
         {:keys [prob-agg]}   (t/get-in-tree tree ucis)
-        opts                 (assoc opts :moves ucis)
+        opts                 (assoc opts :ucis ucis)
         engine-candidates    (ngn/prepare-engine-candidates opts)
         engine-filter        (filter-engine opts engine-candidates)
         player-move          (prepare-player-move opts engine-filter)
         overridden-move      (get overrides ucis)
+
         lichess-candidates   (delay (-> opts
                                         (assoc :group :lichess)
-                                        h/moves->candidates))
+                                        h/historic-moves))
         masters-candidates   (prepare-masters-candidates opts)
         candidates           (or masters-candidates
                                  @lichess-candidates)

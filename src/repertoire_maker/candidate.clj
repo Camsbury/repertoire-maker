@@ -10,7 +10,7 @@
     :as opts}]
   (when masters?
     (let [candidates
-          (h/moves->candidates
+          (h/historic-moves
            (assoc opts :group :masters))
 
           total-plays (->> candidates

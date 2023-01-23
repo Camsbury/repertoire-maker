@@ -42,8 +42,8 @@
 (def query-history
   (memoize do-query-history))
 
-(defn moves->candidates
-  [{:keys [group since color moves player local?]
+(defn historic-moves
+  [{:keys [group since color ucis player local?]
     :or   {since (get-in defaults [:history :since])}
     :as   opts}]
   (let [speeds  (get-in defaults [:history :speeds])
@@ -58,7 +58,7 @@
           {:query-params
            (cond-> {:moves (get-in defaults [:history :moves])
                     :topGames (get-in defaults [:history :top-games])
-                    :fen      (not/ucis->fen moves)}
+                    :fen      (not/ucis->fen ucis)}
              (= group :lichess)
              (merge
               {:recentGames (get-in defaults [:history :recent-games])
@@ -78,7 +78,7 @@
      (catch [:status 429] _
        (log/info "Hit the move history rate limit. Waiting one minute before resuming requests.")
        (Thread/sleep 60000)
-       (moves->candidates opts))
+       (historic-moves opts))
      (catch Object _
-       (log/error (:throwable &throw-context) "error for moves: " moves)
+       (log/error (:throwable &throw-context) "error for moves: " ucis)
        (throw+)))))

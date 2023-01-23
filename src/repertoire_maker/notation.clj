@@ -1,5 +1,6 @@
 (ns repertoire-maker.notation
   (:require
+   [taoensso.timbre :as log]
    [python-base]
    [libpython-clj2.python :refer [py. py.-]]
    [libpython-clj2.require :refer [require-python]]))
