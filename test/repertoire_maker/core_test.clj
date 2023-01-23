@@ -1,9 +1,9 @@
-(ns repertoire-maker.tree-test
+(ns repertoire-maker.core-test
   (:require
    [taoensso.timbre :as log]
-   [repertoire-maker.tree :as sut]
+   [repertoire-maker.core :as sut]
    [repertoire-maker.util.test :refer [close-to]]
-   [repertoire-maker.util.tree :as tutil]
+   [repertoire-maker.tree :as tutil]
    [flatland.ordered.map :refer [ordered-map]]
    [clojure.edn :as edn]
    [clojure.java.io :as io]
@@ -11,7 +11,7 @@
 
 (deftest starting-state-test
   (with-redefs-fn
-    {#'repertoire-maker.tree/init-move-eval
+    {#'sut/init-move-eval
      (fn [{:keys [color ucis node]}]
        (case (conj ucis node)
          [] {:white-m  0.33
@@ -212,3 +212,4 @@
 
 (deftest build-tree-test
   (is false))
+

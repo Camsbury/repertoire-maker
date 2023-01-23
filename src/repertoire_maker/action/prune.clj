@@ -3,7 +3,7 @@
    [taoensso.timbre :as log]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.strategy :refer [apply-strategy]]
-   [repertoire-maker.util.tree :as t]))
+   [repertoire-maker.tree :as t]))
 
 (defmethod run-action :prune
   [{:keys [step tree stack] :as opts}]

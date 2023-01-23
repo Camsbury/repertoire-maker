@@ -1,4 +1,4 @@
-(ns repertoire-maker.util.tree
+(ns repertoire-maker.tree
   (:require
    [flatland.ordered.map  :refer [ordered-map]]))
 

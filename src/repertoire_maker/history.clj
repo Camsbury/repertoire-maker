@@ -1,7 +1,7 @@
 (ns repertoire-maker.history
   (:require
    [taoensso.timbre :as log]
-   [repertoire-maker.util.notation :as not]
+   [repertoire-maker.notation :as not]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.util.web :as web]
    [slingshot.slingshot :refer [try+ throw+]]
@@ -17,7 +17,7 @@
   (+ white draws black))
 
 (defn process-option
-  [total-count {:keys [uci white draws black] :as option}]
+  [total-count {:keys [uci white black] :as option}]
   (let [total (total-option option)
         white (float (/ white total))
         black (float (/ black total))]
@@ -25,9 +25,7 @@
      :white      white
      :black      black
      :play-count total
-     :prob       (float (/ total total-count))
-     ;; TODO: remove once we switch over to the single loop
-     :play-pct   (float (/ total total-count))}))
+     :prob       (float (/ total total-count))}))
 
 (defn process-candidates
   [candidates]
@@ -84,22 +82,3 @@
      (catch Object _
        (log/error (:throwable &throw-context) "error for moves: " moves)
        (throw+)))))
-
-
-(comment
-  (-> :public
-      urls
-      (str "lichess")
-      (query-history
-       {:query-params
-        {:moves       30
-         :topGames    0
-         :play        "e2e4,c7c5,g1f3"
-         :recentGames 0
-         :speeds      "bullet,blitz,rapid"
-         :ratings     "2000,2200,2500"}})
-      :body
-      web/from-json
-      :moves
-      process-candidates)
-  )

@@ -1,4 +1,4 @@
-(ns repertoire-maker.util.notation
+(ns repertoire-maker.notation
   (:require
    [python-base]
    [libpython-clj2.python :refer [py. py.-]]

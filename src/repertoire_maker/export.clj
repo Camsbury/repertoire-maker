@@ -3,7 +3,7 @@
    [python-base]
    [libpython-clj2.python :refer [py. py.-] :as py]
    [libpython-clj2.require :refer [require-python]]
-   [repertoire-maker.util.tree :as tutil]))
+   [repertoire-maker.tree :as tutil]))
 
 (require-python
  '[chess     :as chess]

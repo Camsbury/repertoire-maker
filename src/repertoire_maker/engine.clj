@@ -3,7 +3,7 @@
    [python-base]
    [environ.core :refer [env]]
    [clojure.string :as str]
-   [repertoire-maker.util.notation :as not]
+   [repertoire-maker.notation :as not]
    [repertoire-maker.cloud-eval :as cloud-eval]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.score :as score]

@@ -6,7 +6,7 @@
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.history :as h]
-   [repertoire-maker.util.tree :as t]))
+   [repertoire-maker.tree :as t]))
 
 (defn- extract-filtered-moves
   [opts candidates]

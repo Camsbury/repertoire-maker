@@ -2,7 +2,7 @@
   (:require
    [repertoire-maker.strategy :refer [apply-strategy]]
    [repertoire-maker.action.multi :refer [run-action]]
-   [repertoire-maker.util.tree :as t]))
+   [repertoire-maker.tree :as t]))
 
 (defn- agg-stat
   [stat]

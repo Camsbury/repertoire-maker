@@ -3,7 +3,7 @@
    [taoensso.timbre :as log]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.default :refer [defaults]]
-   [repertoire-maker.util.tree :as t]))
+   [repertoire-maker.tree :as t]))
 
 (def alternate-stats
   {:calc-stats  :trans-stats

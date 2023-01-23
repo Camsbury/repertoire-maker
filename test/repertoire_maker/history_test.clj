@@ -19,4 +19,4 @@
     (is (close-to white-win-pct (:white processed)))
     (is (close-to black-win-pct (:black processed)))
     (is (close-to total-moves (:play-count processed)))
-    (is (close-to (double (/ total-moves prior-total)) (:play-pct processed)))))
+    (is (close-to (double (/ total-moves prior-total)) (:prob processed)))))

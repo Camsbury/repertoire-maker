@@ -4,7 +4,7 @@
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.history :as h]
-   [repertoire-maker.util.tree :as t]))
+   [repertoire-maker.tree :as t]))
 
 (defmethod run-action :init-responses
   [{:keys [min-resp-prob step tree stack]

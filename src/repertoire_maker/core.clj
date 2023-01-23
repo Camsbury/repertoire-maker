@@ -4,11 +4,16 @@
    [repertoire-maker.action.core :refer [run-action]]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.history :as h]
-   [repertoire-maker.util.core :as util]
-   [repertoire-maker.util.notation :as not]
-   [repertoire-maker.util.tree :as t]
+   [repertoire-maker.notation :as not]
+   [repertoire-maker.tree :as t]
    [repertoire-maker.export :as export]
    [repertoire-maker.stat :as stat]))
+
+(defn- my-turn? [color moves]
+  (= color
+     (if (zero? (mod (count moves) 2))
+       :white
+       :black)))
 
 (defn base-node
   "Numbers based on lichess and engine cache"
@@ -68,7 +73,7 @@
                       (assoc :prob-m  (:prob  masters-eval)))
 
         prob-agg (cond-> prob-agg
-                   (not (util/my-turn? color ucis))
+                   (not (my-turn? color ucis))
                    (* (:prob move-eval)))]
 
     (-> move-eval
@@ -86,7 +91,7 @@
             (dissoc :moves))
 
         stack
-        (if (util/my-turn? color ucis)
+        (if (my-turn? color ucis)
           (list
            {:action :candidates
             :ucis   ucis
@@ -147,6 +152,7 @@
   Conditionally runs stats and exports as PGN"
   [{:keys [log-stats? export? export-path] :as opts}]
   (cond-> (build-tree opts)
+    #_#_
     log-stats?
     stat/log-stats
     export?
