@@ -1,20 +1,19 @@
 (ns repertoire-maker.action.prune
   (:require
+   [malli.core :as m]
    [taoensso.timbre :as log]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.strategy :refer [apply-strategy]]
+   [repertoire-maker.schema :as schema]
    [repertoire-maker.tree :as t]))
 
-(defmethod run-action :prune
+
+(defn prune-tree
   [{:keys [step tree stack] :as opts}]
   (let [{:keys [ucis]} step
 
         node       (t/get-in-tree tree ucis)
         children   (:responses node)
-
-        #_#_
-        _ (when (empty? ucis)
-            (log/info children))
 
         choice-uci (-> opts
                        (assoc :children children)
@@ -41,3 +40,16 @@
     (-> opts
         (assoc :tree tree)
         (assoc :stack stack))))
+(m/=>
+ prune-tree
+ [:=>
+  [:cat
+   [:and
+    schema/build-tree-opts
+    schema/config-opts
+    [:map [:step schema/build-step]]]]
+  schema/build-tree-opts])
+
+(defmethod run-action :prune
+  [opts]
+  (prune-tree opts))

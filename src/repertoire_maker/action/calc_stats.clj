@@ -2,9 +2,9 @@
   (:require
    [malli.core :as m]
    [malli.clj-kondo :as mc]
+   [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.schema :as schema]
    [repertoire-maker.stat :refer [agg-stat]]
-   [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.tree :as t]))
 
 (defn- prob-attr

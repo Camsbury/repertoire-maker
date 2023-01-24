@@ -1,14 +1,14 @@
 (ns repertoire-maker.action.responses
   (:require
-   [clojure.set :as set]
+   [malli.core :as m]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.candidate :refer [prepare-masters-candidates get-candidate]]
    [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.history :as h]
+   [repertoire-maker.schema :as schema]
    [repertoire-maker.tree :as t]))
 
-;; Enumerate responses to a move
-(defmethod run-action :responses
+(defn enumerate-responses
   [{:keys [min-resp-prob min-prob-agg step tree stack]
     :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])
            min-prob-agg (get-in defaults [:algo :min-prob-agg])}
@@ -51,3 +51,17 @@
     (-> opts
         (assoc :tree tree)
         (assoc :stack stack))))
+(m/=>
+ enumerate-responses
+ [:=>
+  [:cat
+   [:and
+    schema/build-tree-opts
+    schema/config-opts
+    [:map [:step schema/build-step]]]]
+  schema/build-tree-opts])
+
+;; Enumerate responses to a move
+(defmethod run-action :responses
+  [opts]
+  (enumerate-responses opts))

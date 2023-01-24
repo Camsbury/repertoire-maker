@@ -1,8 +1,10 @@
 (ns repertoire-maker.action.prune-hooks
   (:require
+   [malli.core :as m]
    [taoensso.timbre :as log]
    [repertoire-maker.action.multi :refer [run-action]]
    [repertoire-maker.default :refer [defaults]]
+   [repertoire-maker.schema :as schema]
    [repertoire-maker.tree :as t]))
 
 (def alternate-stats
@@ -17,6 +19,13 @@
      [{:action action
        :ucis   ucis}]
      (mapcat (do-prune-hooks (alternate-stats action)) responses))))
+(m/=>
+ do-prune-hooks
+ [:=>
+  [:cat schema/action]
+  [:=>
+   [:cat [:tuple schema/uci schema/move-tree]]
+   [:sequential schema/build-step]]])
 
 (defn prune-hooks
   [[_ {:keys [ucis responses]}]]
@@ -26,8 +35,13 @@
     {:action :trans-stats
      :ucis   ucis}]
    (mapcat (do-prune-hooks :calc-stats) responses)))
+(m/=>
+ prune-hooks
+ [:=>
+  [:cat [:tuple schema/uci schema/move-tree]]
+  [:sequential schema/build-step]])
 
-(defmethod run-action :create-prune-hooks
+(defn create-prune-hooks
   [{:keys [min-prob-agg step tree stack]
     :or   {min-prob-agg (get-in defaults [:algo :min-prob-agg])}
     :as   opts}]
@@ -57,3 +71,18 @@
      opts
      {:tree  tree
       :stack (into stack (mapcat prune-hooks viable-responses))})))
+(m/=>
+ create-prune-hooks
+ [:=>
+  [:cat
+   [:and
+    schema/build-tree-opts
+    schema/config-opts
+    [:map [:step schema/build-step]]]]
+  [:and
+   schema/config-opts
+   schema/build-tree-opts]])
+
+(defmethod run-action :create-prune-hooks
+  [opts]
+  (create-prune-hooks opts))
