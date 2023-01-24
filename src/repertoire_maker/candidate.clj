@@ -1,8 +1,10 @@
 (ns repertoire-maker.candidate
   (:require
+   [malli.core :as m]
    [clojure.set :as set]
    [repertoire-maker.default :refer [defaults]]
-   [repertoire-maker.history :as h]))
+   [repertoire-maker.history :as h]
+   [repertoire-maker.schema :as schema]))
 
 (defn prepare-masters-candidates
   [{:keys [masters? min-total-masters]
@@ -20,9 +22,23 @@
         (map
          #(set/rename-keys % {:white :white-m :black :black-m})
          candidates)))))
+(m/=>
+ prepare-masters-candidates
+ [:=>
+  [:cat
+   [:and
+    schema/build-tree-opts
+    schema/config-opts]]
+  [:sequential schema/move-node]])
 
 (defn get-candidate
   [candidates move]
   (->> candidates
        (filter #(= (:uci move) (:uci %)))
        first))
+(m/=>
+ get-candidate
+ [:=>
+  [:cat
+   [:sequential schema/move-node] schema/uci]
+  schema/move-node])

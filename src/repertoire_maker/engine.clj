@@ -49,14 +49,17 @@
 
 (defn moves->engine-candidates
   [{:keys [color moves move-count depth hash threads]}]
+(defn ucis->engine-candidates
+  [{:keys [color ucis move-count depth hash threads]}]
+  (swap! engine-counter inc)
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
         _      (py. engine "configure" (py/->py-dict {"Hash"    hash
                                                       "Threads" threads}))
         board  (chess/Board)
         _      (reduce
-                (fn [_ move] (py. board "push" (py. chess/Move "from_uci" move)))
+                (fn [_ uci] (py. board "push" (py. chess/Move "from_uci" uci)))
                 nil
-                moves)
+                ucis)
         info   (py. engine
                     "analyse"
                     board
@@ -75,16 +78,18 @@
     (let [opts (-> defaults :engine (merge opts))
 
           {:keys [depth candidates]}
-          (some-> {:fen     (not/ucis->fen ucis)
-                   :color   color
-                   :breadth move-count}
-                  cloud-eval/fen->cloud-eval
-                  (merge
-                   (cloud-eval/fen->cloud-eval
-                    {:fen   (not/ucis->fen ucis)
-                     :color color})))]
+          (merge
+           (cloud-eval/fen->cloud-eval
+            {:fen     (not/ucis->fen ucis)
+             :color   color
+             :breadth move-count})
+           (cloud-eval/fen->cloud-eval
+            {:fen   (not/ucis->fen ucis)
+             :color color
+             :breadth 5}))]
 
       (if (some-> depth
                   (> (:depth opts)))
         candidates
-        (moves->engine-candidates opts)))))
+        (ucis->engine-candidates opts)))))
+

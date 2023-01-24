@@ -31,19 +31,19 @@
 
 (def move-node
   [:map
-   [:white       :double]
-   [:white-agg   :double]
-   [:white-m     :double]
-   [:white-m-agg :double]
-   [:black       :double]
-   [:black-agg   :double]
-   [:black-m     :double]
-   [:black-m-agg :double]
-   [:score       :double]
-   [:score-agg   :double]
-   [:prob        :double]
-   [:prob-m      :double]
-   [:prob-agg    :double]
+   [:white       {:optional true} [:maybe :double]]
+   [:white-agg   {:optional true} [:maybe :double]]
+   [:white-m     {:optional true} [:maybe :double]]
+   [:white-m-agg {:optional true} [:maybe :double]]
+   [:black       {:optional true} [:maybe :double]]
+   [:black-agg   {:optional true} [:maybe :double]]
+   [:black-m     {:optional true} [:maybe :double]]
+   [:black-m-agg {:optional true} [:maybe :double]]
+   [:score       {:optional true} [:maybe :double]]
+   [:score-agg   {:optional true} [:maybe :double]]
+   [:prob        {:optional true} [:maybe :double]]
+   [:prob-m      {:optional true} [:maybe :double]]
+   [:prob-agg    {:optional true} [:maybe :double]]
    [:ucis        [:sequential uci]]])
 
 (def local-registry
@@ -54,7 +54,7 @@
    [:and
     move-node
     [:map
-     [:responses   [:ref ::responses]]]]})
+     [:responses {:optional true} [:ref ::responses]]]]})
 
 (def responses
   [:schema {:registry local-registry} ::responses])
@@ -104,18 +104,19 @@
 
 (def config-opts
   [:map
-   [:allowable-loss :double]
-   [:color          color]
-   [:export?        :boolean]
-   [:masters?       :boolean]
-   [:min-cand-prob  :double]
-   [:min-plays      :int]
-   [:min-prob-agg   :double]
-   [:min-resp-prob  :double]
-   [:overrides      overrides]
-   [:search-depth   :int]
-   [:strategy       strategy]
-   [:use-engine?    :boolean]])
+   [:allowable-loss {:optional true}  :double]
+   [:color          {:optional false} color]
+   [:export?        {:optional true}  :boolean]
+   [:masters?       {:optional true}  :boolean]
+   [:moves?         {:optional true}  [:sequential :string]] ; NOTE: could come up with some kind of SAN validation
+   [:min-cand-prob  {:optional true}  :double]
+   [:min-plays      {:optional true}  :int]
+   [:min-prob-agg   {:optional true}  :double]
+   [:min-resp-prob  {:optional true}  :double]
+   [:overrides      {:optional true}  overrides]
+   [:search-depth   {:optional true}  [:and :int [:> 0]]]
+   [:strategy       {:optional true}  strategy]
+   [:use-engine?    {:optional true}  :boolean]])
 
 (def build-tree-opts
   [:map
@@ -129,4 +130,5 @@
 (comment
   (md/start!)
   (mc/emit!)
+
   )

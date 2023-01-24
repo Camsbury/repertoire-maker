@@ -1,6 +1,7 @@
 (ns repertoire-maker.action.candidates
   (:require
    [malli.core :as m]
+   [taoensso.timbre :as log]
    [repertoire-maker.candidate :refer [get-candidate prepare-masters-candidates]]
    [repertoire-maker.stat :refer [agg-stat]]
    [repertoire-maker.action.multi :refer [run-action]]
@@ -125,6 +126,11 @@
                (filter #(< min-plays (:play-count %)))
                (filter #(< min-cand-prob (:prob %)))
                engine-filter))
+
+
+        candidates (if (seq candidates)
+                     candidates
+                     (->> engine-candidates engine-filter))
 
         candidates
         (map
