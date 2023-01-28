@@ -47,11 +47,8 @@
               parse-score
               score/standardize-score)})
 
-(defn moves->engine-candidates
-  [{:keys [color moves move-count depth hash threads]}]
 (defn ucis->engine-candidates
   [{:keys [color ucis move-count depth hash threads]}]
-  (swap! engine-counter inc)
   (let [engine (py. ngn/SimpleEngine "popen_uci" stockfish-path)
         _      (py. engine "configure" (py/->py-dict {"Hash"    hash
                                                       "Threads" threads}))

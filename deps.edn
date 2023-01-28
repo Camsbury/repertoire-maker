@@ -13,6 +13,7 @@
          camel-snake-kebab/camel-snake-kebab {:mvn/version "0.4.3"}
          clj-http/clj-http                   {:mvn/version "3.12.3"}
          clj-python/libpython-clj            {:mvn/version "2.023"}
+         criterium/criterium                 {:mvn/version "0.4.6"}
          com.github.luben/zstd-jni           {:mvn/version "1.5.2-5"}
          environ/environ                     {:mvn/version "1.2.0"}
          lambdaisland/kaocha                 {:mvn/version "1.72.1136"}

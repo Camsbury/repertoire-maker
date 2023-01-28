@@ -3,6 +3,7 @@
    [python-base]
    [clojure.java.io :as io]
    [clojure.string :as str]
+   [criterium.core :as bench]
    [libpython-clj2.python :refer [py. py.-] :as py]
    [libpython-clj2.require :refer [require-python]])
   (:import
@@ -73,7 +74,20 @@
            (every? #(>= % rating))))))
 
 (comment
+
+
+  (time
+   (with-open [reader (path->reader "/media/monoid/compressed-games/indexed/lichess_db_standard_rated_2017-02.pgn.zst")]
+     (->> reader
+          partition-pgns
+          #_
+          (map (fn [pgn]
+                 (-> pgn
+                  python-io/StringIO
+                  pgn/read_headers)))
+          count)))
+
   (filter-compressed-pgns
-   {:in-file "/media/monoid/compressed-games/lichess_db_standard_rated_2022-12.pgn.zst"
-    :out-file "/media/monoid/compressed-games/lichess_db_standard_rated_2022-12-filtered.pgn.zst"
+   {:in-file "/media/monoid/compressed-games/indexed/lichess_db_standard_rated_2013-01.pgn.zst"
+    :out-file "/tmp/example.pgn.zst"
     :filter-fn (min-rating-filter 2200)}))
