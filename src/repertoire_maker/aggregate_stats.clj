@@ -10,6 +10,29 @@
 (def urls
   {:lichess "http://localhost:9090"})
 
+(defn- total-option
+  [{:keys [white draws black]}]
+  (+ white draws black))
+
+(defn process-option
+  [total-count {:keys [uci white black] :as option}]
+  (let [total (total-option option)
+        white (float (/ white total))
+        black (float (/ black total))]
+    {:uci        uci
+     :white      white
+     :black      black
+     :play-count total
+     :prob       (float (/ total total-count))}))
+
+(defn process-candidates
+  [candidates]
+  (let [total-count
+        (->> candidates
+             (map total-option)
+             (reduce +))]
+    (mapv #(process-option total-count %) candidates)))
+
 (defn- do-query-aggregate-stats
   [url params]
   (http/get url params))
@@ -18,7 +41,7 @@
   (memoize do-query-aggregate-stats))
 
 (defn aggregate-stats
-  [{:keys [group color ucis] :as opts}]
+  [{:keys [group ucis]}]
   (let [url (get urls group)]
     (->>
      (-> url
@@ -37,7 +60,7 @@
      (sort-by
       (fn [{:keys [black white draws]}]
         (* -1 (+ black white draws))))
-     (into []))))
+     process-candidates)))
 
 (comment
   (aggregate-stats

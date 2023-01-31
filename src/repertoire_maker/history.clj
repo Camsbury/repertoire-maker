@@ -84,6 +84,11 @@
        (throw+)))))
 
 (comment
+  (historic-moves
+   {:group :lichess
+    :color :white
+    :ucis ["e2e4"]
+    :local? true})
   (let [url (:local urls)
         ucis ["e2e4"]
         group :lichess
