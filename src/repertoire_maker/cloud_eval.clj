@@ -65,6 +65,11 @@
        (log/info "Hit the cloud eval rate limit. Waiting one minute before resuming requests.")
        (Thread/sleep 60000)
        (fen->cloud-eval opts))
+     (catch [:status 502] _
+       ;; NOTE: could just switch to local eval to save time
+       (log/info "Maybe hit the cloud eval rate limit?? status 502")
+       (Thread/sleep 60000)
+       (fen->cloud-eval opts))
      (catch [:status 404] _
        (log/debug (str "Cloud eval for fen: " fen " is unavailable"))
        nil)
