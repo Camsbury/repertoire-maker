@@ -2,6 +2,7 @@
   (:require
    [taoensso.timbre :as log]
    [repertoire-maker.action.core :refer [run-action]]
+   [repertoire-maker.default :refer [defaults]]
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.history :as h]
    [repertoire-maker.notation :as not]
@@ -80,9 +81,12 @@
           :prob-agg prob-agg}))))
 
 (defn starting-state
-  [{:keys [moves] :as opts}]
+  [{:keys [moves search-depth]
+    :or   {search-depth (get-in defaults [:algo :search-depth])}
+    :as opts}]
   (let [{:keys [ucis color] :as opts}
         (-> opts
+            (update :min-resp-pct #(Math/pow % search-depth))
             (assoc  :ucis (not/sans->ucis moves))
             (update :overrides overrides->uci)
             (dissoc :moves))
@@ -130,7 +134,8 @@
 
             #_#_
             _ (when true
-                ;; (log/info (take 5 stack))
+                (log/info (take 5 stack))
+                #_
                 (log/info "step: " step)
                 #_#_
                 (println "tree")
@@ -159,12 +164,14 @@
   (build-repertoire
    {:allowable-loss 0.05
     :color          :white
-    ;; :moves          ["e4"]
-    :min-prob-agg   0.1
-    :min-resp-prob  0.05
-    :min-cand-prob  0.05
+    :moves          []
+    :min-prob-agg   0.01
+    :min-resp-pct   1/2
+    :min-resp-prob  0.01
+    :min-cand-prob  0.01
     :use-engine?    true
     :export?        true
+    ;; :export-path    "/home/monoid/white-0003.pgn"
     :strategy       :max-win-over-loss
-    :search-depth   1
+    :search-depth   2
     :masters?       true}))

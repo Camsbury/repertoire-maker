@@ -76,7 +76,8 @@
      (catch Object _
        (log/info (:throwable &throw-context) "error for fen: " fen)
        (log/info "Stopping cache access and reverting to local engine")
-       (reset! kill-switch true)))))
+       (reset! kill-switch true)
+       nil))))
 
 
 (comment

@@ -10,8 +10,10 @@
 
 (defn init-responses
   "Kicks off the tree builder by grabbing initial opponent responses"
-  [{:keys [min-resp-prob step tree stack]
-    :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])}
+  [{:keys [min-resp-pct min-resp-prob min-prob-agg step tree stack]
+    :or   {min-resp-pct (get-in defaults [:algo :min-resp-pct])
+           min-resp-prob (get-in defaults [:algo :min-resp-prob])
+           min-prob-agg (get-in defaults [:algo :min-prob-agg])}
     :as opts}]
   (let [{:keys [ucis]} step
         {:keys [prob-agg]} (t/get-in-tree tree ucis)
@@ -25,6 +27,8 @@
         (->> (assoc opts :group :lichess)
              h/historic-moves
              (filter #(< min-resp-prob (:prob %)))
+             (filter #(< (* min-prob-agg min-resp-pct)
+                         (* prob-agg (:prob %))))
              (map (fn [move]
                     (merge move
                            {:ucis (conj ucis (:uci move))

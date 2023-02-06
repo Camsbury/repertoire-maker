@@ -3,7 +3,7 @@
   :color          :white
   :min-prob-agg   0.01
   :min-cand-prob  0.01
-  :min-resp-prob  0.01
+  :min-resp-pct  0.01
   :use-engine?    true
   :log-stats?     true
   :export?        true
@@ -14,7 +14,7 @@
   :color          :black
   :min-prob-agg   0.01
   :min-cand-prob  0.01
-  :min-resp-prob  0.01
+  :min-resp-pct  0.01
   :use-engine?    true
   :log-stats?     true
   :export?        true
@@ -25,7 +25,7 @@
   :color          :white
   :min-prob-agg   0.01
   :min-cand-prob  0.01
-  :min-resp-prob  0.01
+  :min-resp-pct  0.01
   :moves          ["e4" "c5"]
   :use-engine?    true
   :log-stats?     true
@@ -37,7 +37,7 @@
   :color          :white
   :min-prob-agg   0.01
   :min-cand-prob  0.01
-  :min-resp-prob  0.01
+  :min-resp-pct  0.01
   :moves          ["e4"]
   :use-engine?    true
   :log-stats?     true
@@ -49,7 +49,7 @@
   :color          :black
   :min-prob-agg   0.01
   :min-cand-prob  0.01
-  :min-resp-prob  0.01
+  :min-resp-pct  0.01
   :moves          ["e4" "c5"]
   :use-engine?    true
   :log-stats?     true
@@ -61,7 +61,7 @@
   :color          :black
   :min-prob-agg   0.01
   :min-cand-prob  0.01
-  :min-resp-prob  0.01
+  :min-resp-pct  0.01
   :moves          ["e4"]
   :use-engine?    true
   :log-stats?     true

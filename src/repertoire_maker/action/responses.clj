@@ -9,8 +9,9 @@
    [repertoire-maker.tree :as t]))
 
 (defn enumerate-responses
-  [{:keys [min-resp-prob min-prob-agg step tree stack]
-    :or   {min-resp-prob (get-in defaults [:algo :min-resp-prob])
+  [{:keys [min-resp-pct min-resp-prob min-prob-agg step tree stack]
+    :or   {min-resp-pct (get-in defaults [:algo :min-resp-pct])
+           min-resp-prob (get-in defaults [:algo :min-resp-prob])
            min-prob-agg (get-in defaults [:algo :min-prob-agg])}
     :as opts}]
   (let [{:keys [ucis depth]} step
@@ -25,6 +26,8 @@
         (->> (assoc opts :group :lichess)
              h/historic-moves
              (filter #(< min-resp-prob (:prob %)))
+             (filter #(< (* min-prob-agg min-resp-pct)
+                         (* prob-agg (:prob %))))
              (filter #(or
                        (not (zero? depth))
                        (< min-prob-agg (* prob-agg (:prob %)))))

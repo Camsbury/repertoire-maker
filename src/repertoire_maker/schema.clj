@@ -112,7 +112,7 @@
    [:min-cand-prob  {:optional true}  :double]
    [:min-plays      {:optional true}  :int]
    [:min-prob-agg   {:optional true}  :double]
-   [:min-resp-prob  {:optional true}  :double]
+   [:min-resp-pct  {:optional true}  :double]
    [:overrides      {:optional true}  overrides]
    [:search-depth   {:optional true}  [:and :int [:> 0]]]
    [:strategy       {:optional true}  strategy]
