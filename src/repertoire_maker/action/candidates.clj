@@ -98,7 +98,7 @@
            min-cand-prob (get-in defaults [:algo :min-cand-prob])
            max-cand-breadth (get-in defaults [:algo :max-cand-breadth])}
     :as   opts}]
-  (let [{:keys [ucis cons-prob]} step
+  (let [{:keys [ucis cons-prob pruned?]} step
         {:keys [prob-agg]}   (t/get-in-tree tree ucis)
         opts                 (assoc opts :ucis ucis)
         engine-candidates    (ngn/prepare-engine-candidates opts)
@@ -170,16 +170,19 @@
 
         _ (println "Looking at the following candidates following " ucis ":\n " (map :uci candidates))
 
-        stack (->> candidates
-                   (reduce
-                    (fn [s c]
-                      (-> s
-                          (conj {:action :calc-stats
-                                 :ucis   (:ucis c)})
-                          (conj {:action :responses
-                                 :ucis   (:ucis c)
-                                 :cons-prob cons-prob})))
-                    stack))]
+        stack
+        (if (and pruned? (= 1 (count candidates)))
+          stack
+          (->> candidates
+               (reduce
+                (fn [s c]
+                  (-> s
+                      (conj {:action :calc-stats
+                             :ucis   (:ucis c)})
+                      (conj {:action :responses
+                             :ucis   (:ucis c)
+                             :cons-prob cons-prob})))
+                stack)))]
   (-> opts
       (assoc :tree tree)
       (assoc :stack stack))))

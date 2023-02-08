@@ -49,7 +49,8 @@
                                  :ucis   (:ucis r)})
                           (conj {:action :candidates
                                  :ucis   (:ucis r)
-                                 :cons-prob (:cons-prob r)})))
+                                 :cons-prob (:cons-prob r)
+                                 :pruned?   pruned?})))
                     stack))]
     (-> opts
         (assoc :tree tree)
