@@ -9,13 +9,20 @@
    [repertoire-maker.tree :as t]))
 
 (defn enumerate-responses
-  [{:keys [min-resp-pct min-resp-prob min-prob-agg step tree stack]
-    :or   {min-resp-pct (get-in defaults [:algo :min-resp-pct])
-           min-resp-prob (get-in defaults [:algo :min-resp-prob])
-           min-prob-agg (get-in defaults [:algo :min-prob-agg])}
-    :as opts}]
+  [{:keys [min-plays
+           min-prob-agg
+           min-resp-pct
+           min-resp-prob
+           step
+           tree
+           stack]
+    :or   {min-plays     (get-in defaults [:algo :min-plays])
+           min-prob-agg  (get-in defaults [:algo :min-prob-agg])
+           min-resp-pct  (get-in defaults [:algo :min-resp-pct])
+           min-resp-prob (get-in defaults [:algo :min-resp-prob])}
+    :as   opts}]
   (let [{:keys [ucis cons-prob pruned?]} step
-        {:keys [prob-agg]} (t/get-in-tree tree ucis)
+        {:keys [prob-agg]}               (t/get-in-tree tree ucis)
 
         opts (assoc opts :ucis ucis)
 
@@ -28,12 +35,14 @@
              (filter #(or
                        (not pruned?)
                        (< min-prob-agg (* prob-agg (:prob %)))))
+
+             (filter #(< min-plays (:play-count %)))
              (map (fn [move]
                     (merge move
-                           {:ucis (conj ucis (:uci move))
+                           {:ucis      (conj ucis (:uci move))
                             :cons-prob (* cons-prob (:prob move))
-                            :prob-m (:prob (get-candidate masters-responses move))
-                            :prob-agg (* prob-agg (:prob move))}))))
+                            :prob-m    (:prob (get-candidate masters-responses move))
+                            :prob-agg  (* prob-agg (:prob move))}))))
 
 
         tree (reduce t/assoc-tree-branch tree responses)
@@ -47,8 +56,8 @@
                       (-> s
                           (conj {:action :trans-stats
                                  :ucis   (:ucis r)})
-                          (conj {:action :candidates
-                                 :ucis   (:ucis r)
+                          (conj {:action    :candidates
+                                 :ucis      (:ucis r)
                                  :cons-prob (:cons-prob r)
                                  :pruned?   pruned?})))
                     stack))]

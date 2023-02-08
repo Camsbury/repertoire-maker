@@ -38,11 +38,13 @@
         (or
          (when (and (some? my-m-stat)
                     (some? opp-m-stat)
-                    (not (zero?  opp-m-stat)))
+                    (not (zero? my-m-stat))
+                    (not (zero? opp-m-stat)))
            (/ opp-m-stat my-m-stat))
 
          (if (and (some? my-stat)
                   (some? opp-stat)
+                  (not (zero? my-stat))
                   (not (zero? opp-stat)))
            (/ opp-stat my-stat)
            0.0))))))

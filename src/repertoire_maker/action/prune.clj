@@ -17,30 +17,32 @@
 
         choice-uci (-> opts
                        (assoc :children children)
-                       apply-strategy)
+                       apply-strategy)]
+    (if (some? choice-uci)
+      (let [tree (->> children
+                      (remove #(= (first %) choice-uci))
+                      (map #(:ucis (second %)))
+                      (reduce t/dissoc-in-tree tree))
 
-        tree (->> children
-                  (remove #(= (first %) choice-uci))
-                  (map #(:ucis (second %)))
-                  (reduce t/dissoc-in-tree tree))
+            ucis (conj ucis choice-uci)
 
-        ucis (conj ucis choice-uci)
+            stack
+            (-> stack
+                (conj {:action :calc-stats
+                       :ucis   ucis})
+                (conj {:action :create-prune-hooks
+                       :ucis   ucis})
+                (conj {:action :responses
+                       :ucis   ucis
+                       :cons-prob 1.0
+                       :pruned? true}))]
 
-        stack (-> stack
-                  (conj {:action :calc-stats
-                         :ucis   ucis})
-                  (conj {:action :create-prune-hooks
-                         :ucis   ucis})
-                  (conj {:action :responses
-                         :ucis   ucis
-                         :cons-prob 1.0
-                         :pruned? true}))]
+        (log/info "Pruned tree to " ucis)
 
-    (log/info "Pruned tree to " ucis)
-
-    (-> opts
-        (assoc :tree tree)
-        (assoc :stack stack))))
+        (-> opts
+            (assoc :tree tree)
+            (assoc :stack stack)))
+      opts)))
 (m/=>
  prune-tree
  [:=>

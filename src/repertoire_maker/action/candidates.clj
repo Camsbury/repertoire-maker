@@ -94,24 +94,24 @@
            stack
            step
            tree]
-    :or   {min-plays     (get-in defaults [:algo :min-plays])
-           min-cand-prob (get-in defaults [:algo :min-cand-prob])
+    :or   {min-plays        (get-in defaults [:algo :min-plays])
+           min-cand-prob    (get-in defaults [:algo :min-cand-prob])
            max-cand-breadth (get-in defaults [:algo :max-cand-breadth])}
     :as   opts}]
   (let [{:keys [ucis cons-prob pruned?]} step
-        {:keys [prob-agg]}   (t/get-in-tree tree ucis)
-        opts                 (assoc opts :ucis ucis)
-        engine-candidates    (ngn/prepare-engine-candidates opts)
-        engine-filter        (filter-engine opts engine-candidates)
-        player-move          (prepare-player-move opts engine-filter)
-        overridden-move      (get overrides ucis)
+        {:keys [prob-agg]}               (t/get-in-tree tree ucis)
+        opts                             (assoc opts :ucis ucis)
+        engine-candidates                (ngn/prepare-engine-candidates opts)
+        engine-filter                    (filter-engine opts engine-candidates)
+        player-move                      (prepare-player-move opts engine-filter)
+        overridden-move                  (get overrides ucis)
 
         lichess-candidates (delay (-> opts
-                                        (assoc :group :lichess)
-                                        h/historic-moves))
+                                      (assoc :group :lichess)
+                                      h/historic-moves))
         masters-candidates (prepare-masters-candidates opts)
         candidates         (or masters-candidates
-                                 @lichess-candidates)
+                               @lichess-candidates)
         candidates
         (cond
           (some? overridden-move)
@@ -179,8 +179,8 @@
                   (-> s
                       (conj {:action :calc-stats
                              :ucis   (:ucis c)})
-                      (conj {:action :responses
-                             :ucis   (:ucis c)
+                      (conj {:action    :responses
+                             :ucis      (:ucis c)
                              :cons-prob cons-prob})))
                 stack)))]
   (-> opts

@@ -49,6 +49,7 @@
         (fn [b m] (py. b "push_uci" m) b)
         board
         ucis)
-       (catch Exception e (do (println "ucis: " ucis)
-                              (throw e))))
+       (catch Exception e
+         (log/error "error for ucis: " ucis)
+         (throw e)))
      (py. board "fen"))))
