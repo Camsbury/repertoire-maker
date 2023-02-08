@@ -88,26 +88,4 @@
    {:group :lichess
     :color :white
     :ucis ["e2e4"]
-    :local? true})
-  (let [url (:local urls)
-        ucis ["e2e4"]
-        group :lichess
-        speeds (get-in defaults [:history :speeds])
-        ratings (get-in defaults [:history :ratings])
-        ]
-    (-> url
-        (str (name :lichess))
-        (query-history
-         {:query-params
-          (cond-> {:moves (get-in defaults [:history :moves])
-                   :topGames (get-in defaults [:history :top-games])
-                   :fen      (not/ucis->fen ucis)}
-            (= group :lichess)
-            (merge
-             {:recentGames (get-in defaults [:history :recent-games])
-              :speeds      (str/join "," speeds)
-              :ratings     (str/join "," ratings)}))})
-        :body
-        web/from-json
-        :moves)
-    ))
+    :local? true}))

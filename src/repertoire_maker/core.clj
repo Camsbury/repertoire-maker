@@ -133,8 +133,8 @@
             (peek stack)
 
             #_#_
-            _ (when true
-                (log/info (take 5 stack))
+            _ (do
+                (log/info stack)
                 #_
                 (log/info "step: " step)
                 #_#_
@@ -162,16 +162,35 @@
 
 (comment
   (build-repertoire
-   {:allowable-loss 0.05
-    :color          :white
-    :moves          []
-    :min-prob-agg   0.01
-    :min-resp-pct   1/2
-    :min-resp-prob  0.01
-    :min-cand-prob  0.01
-    :use-engine?    true
-    :export?        true
-    ;; :export-path    "/home/monoid/white-0003.pgn"
-    :strategy       :max-win-over-loss
-    :search-depth   2
-    :masters?       true}))
+   {:allowable-loss   0.05
+    :color            :black
+    :moves            []
+    :min-prob-agg     0.0008
+    :min-resp-pct     1/2
+    :min-resp-prob    0.01
+    :min-cand-prob    0.01
+    :max-cand-breadth 5
+    :use-engine?      true
+    :export?          true
+    :export-pgn-path  "/home/monoid/black-001.pgn"
+    :export-tree-path "/home/monoid/black-001.edn"
+    :strategy         :max-win-over-loss
+    :search-depth     3
+    :masters?         true})
+
+  (build-repertoire
+   {:allowable-loss   0.05
+    :color            :black
+    :moves            []
+    :min-prob-agg     0.0008
+    :min-resp-pct     1/2
+    :min-resp-prob    0.01
+    :min-cand-prob    0.01
+    :max-cand-breadth 5
+    :use-engine?      true
+    :export?          true
+    :export-pgn-path  "/home/monoid/black-0008.pgn"
+    :export-tree-path  "/home/monoid/black-0008.edn"
+    :strategy         :max-win-over-loss
+    :search-depth     3
+    :masters?         true}))
