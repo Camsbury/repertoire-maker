@@ -168,8 +168,8 @@
     :max-cand-breadth 5
     :use-engine?      true
     :export?          true
-    :export-pgn-path  "/home/monoid/black-001.pgn"
-    :export-tree-path "/home/monoid/black-001.edn"
+    :export-pgn-path  "/home/monoid/black-0008.pgn"
+    :export-tree-path "/home/monoid/black-0008.edn"
     :strategy         :max-win-over-loss
     :masters?         true})
   )
