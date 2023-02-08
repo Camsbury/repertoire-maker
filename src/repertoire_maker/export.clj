@@ -12,7 +12,7 @@
 (defn export-repertoire
   ([move-tree]
    (export-repertoire move-tree nil))
-  ([move-tree path]
+  ([move-tree {:keys [export-pgn-path export-tree-path]}]
    (let [game (pgn/Game)]
      ;;  traversal writing the game tree
      (loop [stack (mapv
@@ -44,8 +44,9 @@
                stack
                next))
              (recur stack)))))
-     (if path
-       ;; NOTE: maybe need to with-out-str and print, idk
-       (spit path game)
+     (when export-tree-path
+       (spit export-tree-path move-tree))
+     (if export-pgn-path
+       (spit export-pgn-path game)
        (println game))
      move-tree)))

@@ -8,49 +8,50 @@
   [stat]
   (keyword (str (name stat) "-m")))
 
-(defmulti apply-strategy
-  "Apply a strategy to choose moves"
+(defmulti strategy->sort-fn
+  "Gets the correct sort fn for a strategy"
   :strategy)
 
-(defmethod apply-strategy :default
+(defmethod strategy->sort-fn :default
   [opts]
   (-> opts
       (assoc :strategy :min-loss)
-      apply-strategy))
+      strategy->sort-fn))
 
-(defmethod apply-strategy :min-loss
-  [{:keys [color children]}]
+(defmethod strategy->sort-fn :min-loss
+  [{:keys [color]}]
   ;; loss is the opposite color
   (let [color ({:black :white :white :black} color)]
-    (->> children
-         (sort-by
-          (fn [[_ node]]
-            (or
-             (get node (agg-stat (m-stat color)))
-             (get node (agg-stat color)))))
-         ffirst)))
+    (fn [node]
+      (or
+       (get node (agg-stat (m-stat color)))
+       (get node (agg-stat color))))))
 
-(defmethod apply-strategy :max-win-over-loss
-  [{:keys [color children]}]
+(defmethod strategy->sort-fn :max-win-over-loss
+  [{:keys [color]}]
   (let [opp-color ({:black :white :white :black} color)]
-    (->> children
-         (sort-by
-          (fn [[_ node]]
-            (let [my-m-stat  (get node (agg-stat (m-stat color)))
-                  opp-m-stat (get node (agg-stat (m-stat opp-color)))
-                  my-stat    (get node (agg-stat color))
-                  opp-stat   (get node (agg-stat opp-color))]
-              (or
-               (when (and (some? my-m-stat)
-                          (some? opp-m-stat)
-                          (not (zero?  opp-m-stat)))
-                 (/ my-m-stat opp-m-stat))
+    (fn [node]
+      (let [my-m-stat  (get node (agg-stat (m-stat color)))
+            opp-m-stat (get node (agg-stat (m-stat opp-color)))
+            my-stat    (get node (agg-stat color))
+            opp-stat   (get node (agg-stat opp-color))]
+        (or
+         (when (and (some? my-m-stat)
+                    (some? opp-m-stat)
+                    (not (zero?  opp-m-stat)))
+           (/ my-m-stat opp-m-stat))
 
-               (if (and (some? my-stat)
-                          (some? opp-stat)
-                          (not (zero? opp-stat)))
-                 (/ my-stat opp-stat)
-                 0.0))))
-          >)
-         ffirst)))
+         (if (and (some? my-stat)
+                  (some? opp-stat)
+                  (not (zero? opp-stat)))
+           (/ my-stat opp-stat)
+           0.0))))))
 
+(defn apply-strategy
+  [{:keys [children] :as opts}]
+  (->> children
+       (sort-by
+        (fn [[_ node]]
+          ((strategy->sort-fn opts)
+           node)))
+       ffirst))

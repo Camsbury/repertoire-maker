@@ -9,6 +9,7 @@
     :min-cand-prob     0.01
     :min-plays         100
     :min-total-masters 500
+    :max-cand-breadth  5
     :strategy          :min-loss
     :search-depth      2}
    :engine

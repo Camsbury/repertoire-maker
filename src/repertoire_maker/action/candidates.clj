@@ -9,6 +9,7 @@
    [repertoire-maker.engine :as ngn]
    [repertoire-maker.history :as h]
    [repertoire-maker.schema :as schema]
+   [repertoire-maker.strategy :refer [strategy->sort-fn]]
    [repertoire-maker.tree :as t]))
 
 (defn- extract-filtered-moves
@@ -88,6 +89,7 @@
   "Enumerate candidates for a given move sequence"
   [{:keys [min-plays
            min-cand-prob
+           max-cand-breadth
            overrides
            search-depth
            stack
@@ -95,6 +97,7 @@
            tree]
     :or   {min-plays     (get-in defaults [:algo :min-plays])
            min-cand-prob (get-in defaults [:algo :min-cand-prob])
+           max-cand-breadth (get-in defaults [:algo :max-cand-breadth])
            search-depth  (get-in defaults [:algo :search-depth])}
     :as   opts}]
   (let [{:keys [ucis depth]} step
@@ -133,38 +136,42 @@
                      (->> engine-candidates engine-filter))
 
         candidates
-        (map
-         #(merge
-           %
-           {:prob-agg prob-agg
-            :ucis     (conj ucis (:uci %))
-            :white    (->> %
-                           (get-candidate @lichess-candidates)
-                           :white)
-            :black    (->> %
-                           (get-candidate @lichess-candidates)
-                           :black)
-            :prob     (->> %
-                           (get-candidate @lichess-candidates)
-                           :prob)
-            :white-m  (->> %
-                           (get-candidate masters-candidates)
-                           :white-m)
-            :black-m  (->> %
-                           (get-candidate masters-candidates)
-                           :black-m)
-            :prob-m   (->> %
-                           (get-candidate masters-candidates)
-                           :prob)
-            :score    (->> %
-                           (get-candidate engine-candidates)
-                           :score)})
-         candidates)
+        (->> candidates
+             (map
+              #(merge
+                %
+                {:prob-agg prob-agg
+                 :ucis     (conj ucis (:uci %))
+                 :white    (->> %
+                                (get-candidate @lichess-candidates)
+                                :white)
+                 :black    (->> %
+                                (get-candidate @lichess-candidates)
+                                :black)
+                 :prob     (->> %
+                                (get-candidate @lichess-candidates)
+                                :prob)
+                 :white-m  (->> %
+                                (get-candidate masters-candidates)
+                                :white-m)
+                 :black-m  (->> %
+                                (get-candidate masters-candidates)
+                                :black-m)
+                 :prob-m   (->> %
+                                (get-candidate masters-candidates)
+                                :prob)
+                 :score    (->> %
+                                (get-candidate engine-candidates)
+                                :score)}))
+             (sort-by (strategy->sort-fn opts))
+             (take max-cand-breadth))
 
         tree (->> candidates
                   ;; init agg stats to the same as the nominal stats
                   (map init-agg-stats)
                   (reduce t/assoc-tree-branch tree))
+
+        _ (println "Looking at the following candidates following " ucis ":\n " (map :uci candidates))
 
         stack (if (< depth search-depth)
                 (->> candidates

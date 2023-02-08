@@ -152,13 +152,13 @@
   an opening stratategy based on the passed options.
 
   Conditionally runs stats and exports as PGN"
-  [{:keys [log-stats? export? export-path] :as opts}]
+  [{:keys [log-stats? export?] :as opts}]
   (cond-> (build-tree opts)
     #_#_
     log-stats?
     stat/log-stats
     export?
-    (export/export-repertoire export-path)))
+    (export/export-repertoire opts)))
 
 (comment
   (build-repertoire
