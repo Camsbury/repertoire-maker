@@ -79,13 +79,14 @@
    [:ucis
     [:sequential uci]]])
 
-(def depth-step
+(def cons-prob-step
   [:and build-step
         [:map
-         [:depth
+         [:cons-prob
           [:and
-           :int
-           [:>= 0]]]]])
+           :double
+           [:<= 1.0]
+           [:>= 0.0]]]]])
 
 (def color
   [:enum

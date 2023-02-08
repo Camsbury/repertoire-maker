@@ -4,14 +4,12 @@
   {:algo
    {:filter-pct        0.01
     :min-prob-agg      0.01
-    :min-resp-pct      1/2
-    :min-resp-prob     0.01
+    :min-resp-prob     0.05
     :min-cand-prob     0.01
     :min-plays         100
     :min-total-masters 500
     :max-cand-breadth  5
-    :strategy          :min-loss
-    :search-depth      2}
+    :strategy          :max-win-over-loss}
    :engine
    {:allowable-loss 0.9
     :move-count     10

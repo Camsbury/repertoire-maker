@@ -33,7 +33,8 @@
                          :ucis   ucis})
                   (conj {:action :responses
                          :ucis   ucis
-                         :depth  0}))]
+                         :cons-prob 1.0
+                         :pruned? true}))]
 
     (log/info "Pruned tree to " ucis)
 

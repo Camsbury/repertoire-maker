@@ -81,12 +81,9 @@
           :prob-agg prob-agg}))))
 
 (defn starting-state
-  [{:keys [moves search-depth]
-    :or   {search-depth (get-in defaults [:algo :search-depth])}
-    :as opts}]
+  [{:keys [moves] :as opts}]
   (let [{:keys [ucis color] :as opts}
         (-> opts
-            (update :min-resp-pct #(Math/pow % search-depth))
             (assoc  :ucis (not/sans->ucis moves))
             (update :overrides overrides->uci)
             (dissoc :moves))
@@ -96,7 +93,7 @@
           (list
            {:action :candidates
             :ucis   ucis
-            :depth  0}
+            :cons-prob 1.0}
            {:action :prune
             :ucis   ucis}
            {:action :trans-stats
@@ -166,8 +163,7 @@
     :color            :black
     :moves            []
     :min-prob-agg     0.0008
-    :min-resp-pct     1/2
-    :min-resp-prob    0.01
+    :min-resp-prob    0.05
     :min-cand-prob    0.01
     :max-cand-breadth 5
     :use-engine?      true
@@ -175,22 +171,5 @@
     :export-pgn-path  "/home/monoid/black-001.pgn"
     :export-tree-path "/home/monoid/black-001.edn"
     :strategy         :max-win-over-loss
-    :search-depth     3
     :masters?         true})
-
-  (build-repertoire
-   {:allowable-loss   0.05
-    :color            :black
-    :moves            []
-    :min-prob-agg     0.0008
-    :min-resp-pct     1/2
-    :min-resp-prob    0.01
-    :min-cand-prob    0.01
-    :max-cand-breadth 5
-    :use-engine?      true
-    :export?          true
-    :export-pgn-path  "/home/monoid/black-0008.pgn"
-    :export-tree-path  "/home/monoid/black-0008.edn"
-    :strategy         :max-win-over-loss
-    :search-depth     3
-    :masters?         true}))
+  )
