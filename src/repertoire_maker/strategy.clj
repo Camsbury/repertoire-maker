@@ -39,12 +39,12 @@
          (when (and (some? my-m-stat)
                     (some? opp-m-stat)
                     (not (zero?  opp-m-stat)))
-           (/ my-m-stat opp-m-stat))
+           (/ opp-m-stat my-m-stat))
 
          (if (and (some? my-stat)
                   (some? opp-stat)
                   (not (zero? opp-stat)))
-           (/ my-stat opp-stat)
+           (/ opp-stat my-stat)
            0.0))))))
 
 (defn apply-strategy
