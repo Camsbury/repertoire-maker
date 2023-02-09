@@ -9,7 +9,7 @@
 
 
 (defn prune-tree
-  [{:keys [step tree stack] :as opts}]
+  [{:keys [step tree stack export-tree-path] :as opts}]
   (let [{:keys [ucis]} step
 
         node       (t/get-in-tree tree ucis)
@@ -36,6 +36,9 @@
                        :ucis   ucis
                        :cons-prob 1.0
                        :pruned? true}))]
+
+        (when (some? export-tree-path)
+          (spit export-tree-path tree))
 
         (log/info "Pruned tree to " ucis)
 
