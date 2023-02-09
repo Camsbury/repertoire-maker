@@ -35,7 +35,8 @@
                 (conj {:action :responses
                        :ucis   ucis
                        :cons-prob 1.0
-                       :pruned? true}))]
+                       :pruned? true
+                       :depth   0}))]
 
         (when (some? export-tree-path)
           (spit export-tree-path tree))

@@ -8,6 +8,7 @@
     :min-plays         100
     :min-total-masters 500
     :max-cand-breadth  5
+    :search-depth      5
     :strategy          :max-win-over-loss}
    :engine
    {:allowable-loss 0.9

@@ -91,14 +91,17 @@
            min-cand-prob
            max-cand-breadth
            overrides
+           search-depth
            stack
            step
            tree]
     :or   {min-plays        (get-in defaults [:algo :min-plays])
            min-cand-prob    (get-in defaults [:algo :min-cand-prob])
-           max-cand-breadth (get-in defaults [:algo :max-cand-breadth])}
+           max-cand-breadth (get-in defaults [:algo :max-cand-breadth])
+           search-depth     (get-in defaults [:algo :search-depth])}
     :as   opts}]
-  (let [{:keys [ucis cons-prob pruned?]} step
+  (let [{:keys [ucis cons-prob depth pruned?]} step
+        depth                            (inc depth)
         {:keys [prob-agg]}               (t/get-in-tree tree ucis)
         opts                             (assoc opts :ucis ucis)
         engine-candidates                (ngn/prepare-engine-candidates opts)
@@ -171,7 +174,9 @@
         _ (println "Looking at the following candidates following " ucis ":\n " (map :uci candidates))
 
         stack
-        (if (and pruned? (= 1 (count candidates)))
+        (if (or
+             (and pruned? (= 1 (count candidates)))
+             (= depth search-depth))
           stack
           (->> candidates
                (reduce
@@ -181,11 +186,12 @@
                              :ucis   (:ucis c)})
                       (conj {:action    :responses
                              :ucis      (:ucis c)
-                             :cons-prob cons-prob})))
+                             :cons-prob cons-prob
+                             :depth     depth})))
                 stack)))]
-  (-> opts
-      (assoc :tree tree)
-      (assoc :stack stack))))
+    (-> opts
+        (assoc :tree tree)
+        (assoc :stack stack))))
 (m/=>
  enumerate-candidates
  [:=>

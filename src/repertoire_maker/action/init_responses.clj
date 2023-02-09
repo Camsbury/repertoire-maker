@@ -46,7 +46,8 @@
                                  :ucis   (:ucis r)})
                           (conj {:action :candidates
                                  :ucis   (:ucis r)
-                                 :cons-prob (:cons-prob r)})))
+                                 :cons-prob (:cons-prob r)
+                                 :depth     0})))
                     stack))]
 
     (-> opts

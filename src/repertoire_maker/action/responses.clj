@@ -11,17 +11,15 @@
 (defn enumerate-responses
   [{:keys [min-plays
            min-prob-agg
-           min-resp-pct
            min-resp-prob
            step
            tree
            stack]
     :or   {min-plays     (get-in defaults [:algo :min-plays])
            min-prob-agg  (get-in defaults [:algo :min-prob-agg])
-           min-resp-pct  (get-in defaults [:algo :min-resp-pct])
            min-resp-prob (get-in defaults [:algo :min-resp-prob])}
     :as   opts}]
-  (let [{:keys [ucis cons-prob pruned?]} step
+  (let [{:keys [ucis cons-prob depth pruned?]} step
         {:keys [prob-agg]}               (t/get-in-tree tree ucis)
 
         opts (assoc opts :ucis ucis)
@@ -59,7 +57,8 @@
                           (conj {:action    :candidates
                                  :ucis      (:ucis r)
                                  :cons-prob (:cons-prob r)
-                                 :pruned?   pruned?})))
+                                 :pruned?   pruned?
+                                 :depth     depth})))
                     stack))]
     (-> opts
         (assoc :tree tree)

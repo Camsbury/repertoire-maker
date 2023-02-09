@@ -91,9 +91,10 @@
         stack
         (if (my-turn? color ucis)
           (list
-           {:action :candidates
-            :ucis   ucis
-            :cons-prob 1.0}
+           {:action    :candidates
+            :ucis      ucis
+            :cons-prob 1.0
+            :depth     0}
            {:action :prune
             :ucis   ucis}
            {:action :trans-stats
@@ -162,21 +163,22 @@
    {:allowable-loss   0.05
     :color            :black
     :moves            []
-    :min-prob-agg     0.0008
+    :min-prob-agg     0.01
     :min-resp-prob    0.05
     :min-cand-prob    0.01
     :max-cand-breadth 5
     :min-plays        100
     :use-engine?      true
     :export?          true
-    :export-pgn-path  "/home/monoid/black-0008.pgn"
-    :export-tree-path "/home/monoid/black-0008.edn"
+    :export-pgn-path  "/home/monoid/black-01.pgn"
+    :export-tree-path "/home/monoid/black-01.edn"
+    :search-depth     5
     :strategy         :max-win-over-loss
     :masters?         true})
 
   (build-repertoire
    {:allowable-loss   0.05
-    :color            :black
+    :color            :white
     :moves            []
     :min-prob-agg     0.01
     :min-resp-prob    0.15
@@ -186,6 +188,7 @@
     :export?          true
     :export-pgn-path  "/home/monoid/black-01.pgn"
     :export-tree-path "/home/monoid/black-01.edn"
+    :search-depth     5
     :strategy         :max-win-over-loss
     :masters?         true})
   )
